@@ -1,9 +1,10 @@
 import requests
+import os
 def get_river_alerts(city):
     
     try:
-        
-        url = (f"http://localhost:5000/api/rivers/{city}")
+        node_api_url = os.getenv("NODE_API_URL", "http://localhost:5000")
+        url = (f"{node_api_url}/api/rivers/{city}")
         response = requests.get(url)
 
         # DEBUG

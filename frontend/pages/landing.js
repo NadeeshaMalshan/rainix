@@ -69,7 +69,8 @@ export default function Landing() {
   const fetchSavedLocationsWeather = async () => {
     try {
       const fetchCityWeather = async (city) => {
-        const res = await fetch(`http://localhost:5000/api/city/${city}`);
+        const nodeApiUrl = process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000";
+        const res = await fetch(`${nodeApiUrl}/api/city/${city}`);
         const result = await res.json();
         if (result.success && result.data.weather) {
           const tempVal = Math.round(result.data.weather.weather.temperature);
@@ -113,12 +114,13 @@ export default function Landing() {
 
   const fetchLiveRivers = async () => {
     try {
+      const nodeApiUrl = process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000";
       // Kelani Ganga (Nagalagam Street) is under region Kelani
-      const kelaniRes = await fetch('http://localhost:5000/api/rivers/Kelani');
+      const kelaniRes = await fetch(`${nodeApiUrl}/api/rivers/Kelani`);
       const kelaniData = await kelaniRes.json();
       
       // Kalu Ganga (Putupaula) is under region Kalu
-      const kaluRes = await fetch('http://localhost:5000/api/rivers/Kalu');
+      const kaluRes = await fetch(`${nodeApiUrl}/api/rivers/Kalu`);
       const kaluData = await kaluRes.json();
 
       const newRivers = [...riverStations];
