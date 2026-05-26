@@ -37,7 +37,7 @@ export default function WeatherDashboard() {
         setSearchQuery('');
       }
 
-      const nodeApiUrl = process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000";
+      const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
       let url = `${nodeApiUrl}/api/city/${encodeURIComponent(resolvedCity)}`;
       if (targetLat && targetLon) {
         url += `?lat=${targetLat}&lon=${targetLon}`;

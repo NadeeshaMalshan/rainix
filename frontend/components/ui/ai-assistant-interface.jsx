@@ -106,7 +106,7 @@ export function AIAssistantInterface() {
 
       try {
         // FastAPI server URL from environment variables or fallback
-        const aiApiUrl = process.env.NEXT_PUBLIC_AI_API_URL || "http://127.0.0.1:8000";
+        const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
         const response = await fetch(`${aiApiUrl}/chat?q=${encodeURIComponent(userText)}&session_id=${sessionIdRef.current}`);
         if (!response.ok) {
           throw new Error("Failed to connect to FastAPI backend");
@@ -238,7 +238,7 @@ export function AIAssistantInterface() {
     // Asynchronously update the LangGraph state thread history with human feedback
     if (targetFeedback) {
       try {
-        const aiApiUrl = process.env.NEXT_PUBLIC_AI_API_URL || "http://127.0.0.1:8000";
+        const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
         await fetch(`${aiApiUrl}/feedback?session_id=${sessionIdRef.current}&type=${targetFeedback}`);
       } catch (err) {
         console.error("Failed to post human feedback to backend:", err);

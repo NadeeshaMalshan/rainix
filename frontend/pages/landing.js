@@ -69,7 +69,7 @@ export default function Landing() {
   const fetchSavedLocationsWeather = async () => {
     try {
       const fetchCityWeather = async (city) => {
-        const nodeApiUrl = process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000";
+        const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
         const res = await fetch(`${nodeApiUrl}/api/city/${city}`);
         const result = await res.json();
         if (result.success && result.data.weather) {
@@ -114,7 +114,7 @@ export default function Landing() {
 
   const fetchLiveRivers = async () => {
     try {
-      const nodeApiUrl = process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000";
+      const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
       // Kelani Ganga (Nagalagam Street) is under region Kelani
       const kelaniRes = await fetch(`${nodeApiUrl}/api/rivers/Kelani`);
       const kelaniData = await kelaniRes.json();
