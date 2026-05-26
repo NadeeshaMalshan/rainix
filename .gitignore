@@ -15,9 +15,6 @@ venv/
 env/
 .env/
 ENV/
-bin/
-lib/
-include/
 pip-selfcheck.json
 
 # Python Caches and Compilation
