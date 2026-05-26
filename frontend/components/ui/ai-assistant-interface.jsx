@@ -120,13 +120,24 @@ export function AIAssistantInterface() {
 
         if (data && data.response) {
           // 1. Direct JSON array (from Native Gemini/Gemma thinking blocks)
-          if (Array.isArray(data.response)) {
-            const thinkingObj = data.response.find(item => item.type === "thinking");
-            const textObj = data.response.find(item => item.type === "text");
-            if (thinkingObj || textObj) {
-              thinkingText = thinkingObj ? (thinkingObj.thinking || thinkingObj.text || "") : "";
-              textContent = textObj ? (textObj.text || textObj.content || "") : "";
-              isStructured = true;
+          if (Array.isArray(data.response) && data.response.length > 0) {
+            if (data.response.every(item => typeof item === "string")) {
+              if (data.response.length >= 2) {
+                thinkingText = data.response[0];
+                textContent = data.response[1];
+                isStructured = true;
+              } else {
+                textContent = data.response[0];
+                isStructured = true;
+              }
+            } else {
+              const thinkingObj = data.response.find(item => item.type === "thinking");
+              const textObj = data.response.find(item => item.type === "text");
+              if (thinkingObj || textObj) {
+                thinkingText = thinkingObj ? (thinkingObj.thinking || thinkingObj.text || "") : "";
+                textContent = textObj ? (textObj.text || textObj.content || "") : "";
+                isStructured = true;
+              }
             }
           }
 
@@ -154,13 +165,24 @@ export function AIAssistantInterface() {
               const trimmed = responseText.trim();
               if (trimmed.startsWith("[")) {
                 const parsed = JSON.parse(trimmed);
-                if (Array.isArray(parsed)) {
-                  const thinkingObj = parsed.find(item => item.type === "thinking");
-                  const textObj = parsed.find(item => item.type === "text");
-                  if (thinkingObj || textObj) {
-                    thinkingText = thinkingObj ? (thinkingObj.thinking || thinkingObj.text || "") : "";
-                    textContent = textObj ? (textObj.text || textObj.content || "") : "";
-                    isStructured = true;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  if (parsed.every(item => typeof item === "string")) {
+                    if (parsed.length >= 2) {
+                      thinkingText = parsed[0];
+                      textContent = parsed[1];
+                      isStructured = true;
+                    } else {
+                      textContent = parsed[0];
+                      isStructured = true;
+                    }
+                  } else {
+                    const thinkingObj = parsed.find(item => item.type === "thinking");
+                    const textObj = parsed.find(item => item.type === "text");
+                    if (thinkingObj || textObj) {
+                      thinkingText = thinkingObj ? (thinkingObj.thinking || thinkingObj.text || "") : "";
+                      textContent = textObj ? (textObj.text || textObj.content || "") : "";
+                      isStructured = true;
+                    }
                   }
                 }
               }
