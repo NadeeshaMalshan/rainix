@@ -1,0 +1,59 @@
+# Dependency Directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Next.js Build and Cache
+.next/
+out/
+build/
+dist/
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+bin/
+lib/
+include/
+pip-selfcheck.json
+
+# Python Caches and Compilation
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment and Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.sample
+*.env
+
+# Local Cache and Temporary Files
+*.json.log
+*.log
+.eslintcache
+.stylelintcache
+*.local
+
+# System/IDE Directories
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Mock Data & Local Cache files in root
+colombo.json
+ratnapura.json
+api_response.json
+api_response_utf8.json
+test_api_res.json
+test_frontend_res.html

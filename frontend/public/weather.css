@@ -1,0 +1,43 @@
+body {
+    background: linear-gradient(180deg, #0A192F 0%, #111317 100%);
+}
+.glass-pane {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+.glass-pane:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+.chart-line {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: dash 3s linear forwards;
+}
+@keyframes dash {
+    to { stroke-dashoffset: 0; }
+}
+.alert-pulse {
+    animation: alert-glow 2s infinite ease-in-out;
+}
+@keyframes alert-glow {
+    0%, 100% { border-color: rgba(255, 180, 171, 0.2); box-shadow: 0 0 0px rgba(255, 180, 171, 0); }
+    50% { border-color: rgba(255, 180, 171, 0.6); box-shadow: 0 0 15px rgba(255, 180, 171, 0.2); }
+}
+.safe-pulse {
+    animation: safe-glow 2s infinite ease-in-out;
+}
+@keyframes safe-glow {
+    0%, 100% { border-color: rgba(173, 198, 255, 0.15); box-shadow: 0 0 0px rgba(173, 198, 255, 0); }
+    50% { border-color: rgba(173, 198, 255, 0.4); box-shadow: 0 0 15px rgba(173, 198, 255, 0.1); }
+}
+.radar-scan {
+    animation: rotate 4s linear infinite;
+    transform-origin: center;
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

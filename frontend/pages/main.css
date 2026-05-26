@@ -1,0 +1,19 @@
+/* Global application-wide styles */
+body {
+    min-height: 100vh;
+    color: #e2e2e7;
+}
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.05); }
+    66% { transform: translate(-20px, 40px) scale(0.95); }
+}
+
+.floating-particle {
+    animation: float var(--duration, 25s) infinite ease-in-out;
+}
