@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
 import { BrainCircuit } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 interface AIThinkingBlockProps {
   content: string;
@@ -11,9 +11,6 @@ interface AIThinkingBlockProps {
 }
 
 export default function AIThinkingBlock({ content, isLive = false }: AIThinkingBlockProps) {
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [timer, setTimer] = useState(0);
 
   useEffect(() => {
@@ -28,43 +25,47 @@ export default function AIThinkingBlock({ content, isLive = false }: AIThinkingB
     };
   }, [isLive]);
 
-  useEffect(() => {
-    if (contentRef.current) {
-      const scrollHeight = contentRef.current.scrollHeight;
-      const clientHeight = contentRef.current.clientHeight;
-      const maxScroll = scrollHeight - clientHeight;
+  const rendered = useMemo(() => {
+    if (!content) return null;
+    const lines = content.split("\n");
 
-      setScrollPosition(0);
+    return lines.map((line, idx) => {
+      const isBullet = line.trim().startsWith("* ") || line.trim().startsWith("- ");
+      let cleanLine = line;
+      if (isBullet) cleanLine = line.trim().substring(2);
 
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
+      const parts: React.ReactNode[] = [];
+      const boldRegex = /\*\*(.*?)\*\*/g;
+      let match: RegExpExecArray | null;
+      let lastIndex = 0;
+
+      while ((match = boldRegex.exec(cleanLine)) !== null) {
+        if (match.index > lastIndex) parts.push(cleanLine.substring(lastIndex, match.index));
+        parts.push(
+          <strong key={`${idx}-${match.index}`} className="font-bold text-gray-950 dark:text-neutral-50">
+            {match[1]}
+          </strong>
+        );
+        lastIndex = boldRegex.lastIndex;
       }
 
-      if (maxScroll > 0) {
-        scrollIntervalRef.current = setInterval(() => {
-          setScrollPosition((prev) => {
-            const newPosition = prev + 1;
-            if (newPosition >= maxScroll) {
-              return 0;
-            }
-            return newPosition;
-          });
-        }, 40); // 40ms scroll delay for smooth reading speed
+      if (lastIndex < cleanLine.length) parts.push(cleanLine.substring(lastIndex));
+
+      if (isBullet) {
+        return (
+          <li key={idx} className="list-disc ml-5 pl-1 mb-1 text-neutral-700 dark:text-neutral-300">
+            {parts}
+          </li>
+        );
       }
 
-      return () => {
-        if (scrollIntervalRef.current) {
-          clearInterval(scrollIntervalRef.current);
-        }
-      };
-    }
+      return (
+        <p key={idx} className="mb-2 min-h-[1.2rem] text-neutral-700 dark:text-neutral-300">
+          {parts}
+        </p>
+      );
+    });
   }, [content]);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = scrollPosition;
-    }
-  }, [scrollPosition]);
 
   return (
     <>
@@ -79,7 +80,7 @@ export default function AIThinkingBlock({ content, isLive = false }: AIThinkingB
                   animation: "shimmer 5s linear infinite",
                 }}
               >
-                rainiX AI is thinking
+                {content && content.trim() ? "Thinking…" : "Working…"}
               </p>
               <span className="text-sm text-muted-foreground">
                 {timer}s
@@ -105,25 +106,12 @@ export default function AIThinkingBlock({ content, isLive = false }: AIThinkingB
             }
           `}</style>
         </div>
-        <Card className="relative h-[150px] overflow-hidden bg-neutral-50 dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 p-2 rounded-xl">
-          {/* Top fade overlay */}
-          <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-neutral-50 dark:from-zinc-900 to-transparent z-10 pointer-events-none h-[40px]" />
-
-          {/* Bottom fade overlay */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-neutral-50 dark:from-zinc-900 to-transparent z-10 pointer-events-none h-[40px]" />
-
-          {/* Scrolling content */}
-          <div
-            ref={contentRef}
-            className="h-full overflow-hidden p-4 text-neutral-600 dark:text-neutral-400"
-            style={{
-              scrollBehavior: "auto",
-            }}
-          >
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
-              {content}
+        <Card className="bg-neutral-50 dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 p-4 rounded-xl overflow-visible">
+          {rendered ? <div className="text-sm leading-relaxed">{rendered}</div> : (
+            <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+              {isLive ? "Waiting for live reasoning…" : "No thought process available."}
             </p>
-          </div>
+          )}
         </Card>
       </div>
     </>
