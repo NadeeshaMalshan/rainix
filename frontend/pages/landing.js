@@ -257,6 +257,9 @@ export default function Landing() {
           tailwind.config = {
             theme: {
               extend: {
+                screens: {
+                  'xs': '375px',
+                },
                 fontFamily: {
                   poppins: ['"Poppins"', 'sans-serif'],
                   sans: ['"Poppins"', 'sans-serif'],
@@ -314,9 +317,46 @@ export default function Landing() {
         .animate-pop-in { animation: pop-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}</style>
 
+      <style dangerouslySetInnerHTML={{ __html: `
+        .responsive-search-container {
+          width: 100% !important;
+          max-width: 300px !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        @media (min-width: 375px) {
+          .responsive-search-container {
+            max-width: 330px !important;
+          }
+        }
+        @media (min-width: 640px) {
+          .responsive-search-container {
+            max-width: 384px !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .responsive-search-container {
+            max-width: 512px !important;
+          }
+        }
+
+        .deep-frosted-pill {
+          background-color: rgba(255, 255, 255, 0.22) !important;
+          -webkit-backdrop-filter: blur(16px) !important;
+          backdrop-filter: blur(16px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.32) !important;
+        }
+        .deep-frosted-dropdown {
+          background-color: rgba(13, 20, 35, 0.85) !important;
+          -webkit-backdrop-filter: blur(28px) !important;
+          backdrop-filter: blur(28px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        }
+      `}} />
+
       {/* Main Background */}
       <div 
-        className="font-poppins w-screen h-screen relative flex flex-col justify-between overflow-y-auto pb-12 transition-all duration-1000"
+        className="font-poppins w-full max-w-full min-h-screen relative flex flex-col justify-between overflow-x-hidden overflow-y-auto pb-12 transition-all duration-1000"
         style={{ background: isNight ? nightGradient : dayGradient }}
       >
         {/* Twinkling Stars (Night-only) */}
@@ -392,25 +432,25 @@ export default function Landing() {
         </div>
 
         {/* Center Main Content Container */}
-        <div className="flex-1 flex flex-col justify-center items-center w-full relative z-40 px-4 md:px-6 pt-[6vh] pb-32 animate-fade-in-up">
+        <div className="flex-1 flex flex-col justify-center items-center w-full relative z-40 px-3 xs:px-4 md:px-6 pt-[6vh] pb-32 animate-fade-in-up">
           
-          <div className="flex flex-col items-center max-w-2xl w-full text-center">
+          <div className="flex flex-col items-center w-full max-w-2xl text-center">
             
       
            
             {/* Liquid Glass text */}
-            <div className="scale-75 md:scale-100 origin-center transition-transform">
+            <div className="w-full max-w-full flex justify-center transition-transform">
               <LiquidGlassText2D text="rainiX" />
             </div>
 
             {/* Simple Minimalist Pill Search Bar */}
-            <div className="w-full max-w-lg mt-6 md:mt-8 flex items-center gap-3">
-              <div className="flex-1 relative">
+            <div className="responsive-search-container mt-5 md:mt-8 flex items-center gap-2 md:gap-3">
+              <div className="flex-1 min-w-0 relative">
                 <div 
-                  className="w-full h-11 md:h-[3.25rem] rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg transition-all duration-300 flex items-center pr-2 pl-4 md:pl-5 hover:bg-white/25 focus-within:bg-white/25 focus-within:border-white/40"
+                  className="deep-frosted-pill w-full h-11 md:h-[3.25rem] rounded-full shadow-lg transition-all duration-300 flex items-center pr-1.5 pl-3 md:pl-5 hover:bg-white/25 focus-within:bg-white/25 focus-within:border-white/40"
                 >
                   <input 
-                    className="flex-1 min-w-0 bg-transparent border-none text-left focus:ring-0 text-white font-medium text-base md:text-lg placeholder:text-white placeholder:opacity-60 outline-none"
+                    className="flex-1 min-w-0 bg-transparent border-none text-left focus:ring-0 text-white font-medium text-sm md:text-lg placeholder:text-white placeholder:opacity-60 outline-none"
                     placeholder="Search City or River..." 
                     type="text"
                     value={searchQuery}
@@ -430,55 +470,33 @@ export default function Landing() {
                 {/* Dynamic Dropdown Overlay (Search Suggestions vs. Grouped Recents & Saved) */}
                 {isFocused && (
                   <div 
-                    className="absolute top-[3.2rem] md:top-[3.75rem] left-0 w-full rounded-2xl bg-black/45 backdrop-blur-xl border border-white/20 shadow-2xl transition-all duration-300 z-50 flex flex-col overflow-hidden max-h-[250px] md:max-h-[300px] overflow-y-auto"
+                    className="deep-frosted-dropdown absolute top-[3.2rem] md:top-[3.75rem] left-0 w-full rounded-2xl shadow-2xl transition-all duration-300 z-50 flex flex-col overflow-hidden max-h-[250px] md:max-h-[300px] overflow-y-auto"
                   >
                     {searchQuery.trim().length < 2 ? (
                       /* Case 1: Search input is empty or cleared - immediately show Recents/Saved */
                       <>
                         {recentSearches.length > 0 && (
-                          <div className="p-2 md:p-3 border-b border-white/10">
-                            <div className="text-[9px] md:text-[10px] uppercase font-bold text-sky-400 px-3 py-1 flex items-center gap-1.5">
+                          <div className="p-2 md:p-3">
+                            <div className="text-[9px] md:text-[10px] uppercase font-normal text-white opacity-50 px-3 py-1 flex items-center gap-1.5">
                               <span className="material-symbols-outlined text-xs">history</span> Recent Searches
                             </div>
-                            {recentSearches.slice(0, 3).map((item, idx) => (
+                            {recentSearches.slice(0, 2).map((item, idx) => (
                               <div 
                                 key={idx} 
                                 className="px-3 py-1.5 md:py-2 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex flex-col mt-0.5 md:mt-1"
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => { setSearchQuery(item.query); handleSearchSubmit(item.query); setIsFocused(false); }}
                               >
-                                <span className="font-semibold text-xs md:text-sm">{item.name}</span>
-                                <span className="text-[9px] md:text-[10px] opacity-60">{item.coords}</span>
+                                <span className="font-normal text-xs md:text-sm">{item.name}</span>
+                                <span className="text-[9px] md:text-[10px] text-white opacity-40">{item.coords}</span>
                               </div>
                             ))}
                           </div>
                         )}
-
-                        {Object.keys(savedLocationsWeather).length > 0 && (
-                          <div className="p-2 md:p-3">
-                            <div className="text-[9px] md:text-[10px] uppercase font-bold text-sky-400 px-3 py-1 flex items-center gap-1.5">
-                              <span className="material-symbols-outlined text-xs">bookmark</span> Saved Locations
-                            </div>
-                            {Object.entries(savedLocationsWeather).map(([name, loc], idx) => (
-                              <div 
-                                key={idx} 
-                                className="px-3 py-1.5 md:py-2 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex items-center justify-between mt-0.5 md:mt-1"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => { const q = name.split(',')[0]; setSearchQuery(q); handleSearchSubmit(q); setIsFocused(false); }}
-                              >
-                                <div>
-                                  <span className="font-semibold text-xs md:text-sm block">{name}</span>
-                                  <span className="text-[9px] md:text-[10px] text-green-400">{loc.status}</span>
-                                </div>
-                                <span className="text-xs md:text-sm font-bold text-sky-400">{loc.temp}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {recentSearches.length === 0 && Object.keys(savedLocationsWeather).length === 0 && (
-                          <div className="p-4 text-center text-white/50 text-[11px] md:text-xs font-semibold">
-                            No recent or saved locations available.
+ 
+                        {recentSearches.length === 0 && (
+                          <div className="p-4 text-center text-white/50 text-[11px] md:text-xs font-normal">
+                            No recent searches available.
                           </div>
                         )}
                       </>
@@ -487,7 +505,7 @@ export default function Landing() {
                       showSuggestions && suggestions.length > 0 ? (
                         /* Subcase A: Suggestions available */
                         <div className="p-2 md:p-3">
-                          <div className="text-[9px] md:text-[10px] uppercase font-bold text-sky-400 px-3 py-1 flex items-center gap-1.5">
+                          <div className="text-[9px] md:text-[10px] uppercase font-normal text-white opacity-50 px-3 py-1 flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-xs">travel_explore</span> Search Results
                           </div>
                           {suggestions.map((s, idx) => (
@@ -497,17 +515,17 @@ export default function Landing() {
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => { setSearchQuery(s.name); handleSearchSubmit(s.name); setIsFocused(false); }}
                             >
-                              <span className="font-semibold text-xs md:text-sm flex items-center gap-1">
-                                {s.isRiver && <span className="material-symbols-outlined text-sky-400 text-sm">waves</span>}
+                              <span className="font-normal text-xs md:text-sm flex items-center gap-1">
+                                {s.isRiver && <span className="material-symbols-outlined text-white opacity-70 text-sm">waves</span>}
                                 {s.name}
                               </span>
-                              <span className="text-[9px] md:text-[10px] opacity-75">{s.admin1 ? `${s.admin1}, ` : ''}{s.country}</span>
+                              <span className="text-[9px] md:text-[10px] text-white opacity-50">{s.admin1 ? `${s.admin1}, ` : ''}{s.country}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
                         /* Subcase B: No results available - Display Search results are not available */
-                        <div className="p-4 md:p-5 text-center text-white/60 text-xs md:text-sm font-medium">
+                        <div className="p-4 md:p-5 text-center text-white/50 text-xs md:text-sm font-normal">
                           <span className="material-symbols-outlined text-white/40 text-lg md:text-xl block mb-1">info</span>
                           Search results are not available
                         </div>
@@ -517,10 +535,9 @@ export default function Landing() {
                 )}
               </div>
 
-              {/* GPS weather action button */}
               <button 
                 type="button" 
-                className="h-11 w-11 md:h-[3.25rem] md:w-[3.25rem] rounded-full flex-shrink-0 bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 transition-all duration-300 flex items-center justify-center text-white shadow-lg cursor-pointer" 
+                className="deep-frosted-pill h-10 w-10 md:h-[3.25rem] md:w-[3.25rem] rounded-full flex-shrink-0 hover:bg-white/30 transition-all duration-300 flex items-center justify-center text-white shadow-lg cursor-pointer" 
                 onClick={handleGpsClick}
               >
                 <span className="material-symbols-outlined text-xl md:text-2xl">my_location</span>
@@ -530,7 +547,7 @@ export default function Landing() {
             {/* rainiX AI Quick Gateway Button */}
             <button
   onClick={() => router.push('/ai')}
-  className="mt-6 px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 hover:border-white/30 shadow-lg text-white text-sm md:text-base flex items-center gap-2 transition-all hover:scale-[1.03] active:scale-[0.98] cursor-pointer group"
+  className="mt-4 md:mt-6 px-5 md:px-6 py-2 md:py-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 hover:border-white/30 shadow-lg text-white text-xs md:text-base flex items-center gap-1.5 md:gap-2 transition-all hover:scale-[1.03] active:scale-[0.98] cursor-pointer group"
 >
   <span className="text-black dark:text-white leading-none flex items-center">
     ↗

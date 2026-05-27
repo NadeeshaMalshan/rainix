@@ -677,7 +677,7 @@ export function AIAssistantInterface() {
       <motion.div
         layoutId="chatGPTInputBar"
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
-        className="w-full bg-neutral-100 dark:bg-[#2f2f2f] rounded-full px-4 py-2 flex items-center justify-between shadow-sm border border-transparent dark:border-zinc-800 transition-colors pl-6"
+        className="ai-input-bar-pill w-full bg-neutral-100 dark:bg-[#2f2f2f] rounded-full flex items-center justify-between shadow-sm border border-transparent dark:border-zinc-800 transition-colors"
       >
         {/* Input Element */}
         <input
@@ -687,11 +687,11 @@ export function AIAssistantInterface() {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyPress}
-          className="flex-1 text-gray-800 dark:text-neutral-100 text-base outline-none placeholder:text-gray-400 dark:placeholder:text-neutral-400 border-0 focus:ring-0 p-0 bg-transparent"
+          className="flex-1 min-w-0 text-gray-800 dark:text-neutral-100 text-base outline-none placeholder:text-gray-400 dark:placeholder:text-neutral-400 border-0 focus:ring-0 p-0 bg-transparent"
         />
 
         {/* Right-side utility and submit button */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             className="p-2 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors"
             title="Voice input"
@@ -730,6 +730,50 @@ export function AIAssistantInterface() {
 
   return (
     <div className="min-h-screen h-screen flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .responsive-ai-input-landing {
+          width: 100% !important;
+          max-width: 320px !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        .responsive-ai-input-chat {
+          width: 100% !important;
+          max-width: 320px !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        .ai-input-bar-pill {
+          padding-left: 1rem !important;
+          padding-right: 0.5rem !important;
+          padding-top: 0.5rem !important;
+          padding-bottom: 0.5rem !important;
+        }
+        @media (min-width: 375px) {
+          .responsive-ai-input-landing, .responsive-ai-input-chat {
+            max-width: 340px !important;
+          }
+        }
+        @media (min-width: 640px) {
+          .responsive-ai-input-landing, .responsive-ai-input-chat {
+            max-width: 384px !important;
+          }
+          .ai-input-bar-pill {
+            padding-left: 1.5rem !important;
+            padding-right: 1rem !important;
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .responsive-ai-input-landing {
+            max-width: 512px !important;
+          }
+          .responsive-ai-input-chat {
+            max-width: 768px !important;
+          }
+        }
+      `}} />
       
       {/* Premium Glassmorphic Navbar */}
       <nav className="w-full h-16 border-b border-neutral-200/50 dark:border-zinc-800/50 bg-white/70 dark:bg-[#0d0d0d]/70 backdrop-blur-md flex items-center justify-between px-6 z-50 sticky top-0">
@@ -1039,7 +1083,7 @@ export function AIAssistantInterface() {
               </p>
               
               {/* Centered Input Bar in main landing UI */}
-              <div className="w-full">
+              <div className="responsive-ai-input-landing">
                 {renderInputBar()}
               </div>
             </div>
@@ -1220,7 +1264,7 @@ export function AIAssistantInterface() {
       {/* Input container at the bottom (only shown when chat is active) */}
       {messages.length > 0 && (
         <div className="w-full flex justify-center py-4 bg-gradient-to-t from-white dark:from-[#0d0d0d] via-white dark:via-[#0d0d0d] to-transparent sticky bottom-0">
-          <div className="w-full max-w-3xl px-4 flex flex-col gap-2">
+          <div className="responsive-ai-input-chat px-4 flex flex-col gap-2">
             {renderInputBar()}
           </div>
         </div>

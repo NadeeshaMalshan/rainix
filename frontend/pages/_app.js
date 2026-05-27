@@ -23,6 +23,9 @@ export default function App({ Component, pageProps }) {
                 darkMode: "media",
                 theme: {
                     extend: {
+                        "screens": {
+                            "xs": "375px"
+                        },
                         "colors": {
                             "inverse-surface": "#e2e2e7",
                             "on-primary-container": "#00285c",
