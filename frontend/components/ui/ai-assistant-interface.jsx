@@ -202,25 +202,16 @@ function AIRiverTelemetryCard({ data }) {
           ? Number(river.levels.alert)
           : (lowerName.includes("kelani") ? 5.00 : lowerName.includes("kalu") ? 4.00 : lowerName.includes("nilwala") ? 4.50 : 4.00);
 
+        // Trend should reflect the most recent movement, not older swings.
+        // Example: 7:00 = 5.0m, 7:30 = 5.5m => Rising (even if earlier it fell).
         let trendText = "Stable";
-        if (hasHistory && river.historicalData.length >= 4) {
-          const lastVal = river.historicalData[river.historicalData.length - 1].y;
-          const prevVal = river.historicalData[river.historicalData.length - 4].y;
+        if (hasHistory && river.historicalData.length >= 2) {
+          const lastVal = Number(river.historicalData[river.historicalData.length - 1].y);
+          const prevVal = Number(river.historicalData[river.historicalData.length - 2].y);
           const diff = lastVal - prevVal;
-          if (diff > 0.01) {
-            trendText = "Rising";
-          } else if (diff < -0.01) {
-            trendText = "Falling";
-          }
-        } else if (hasHistory && river.historicalData.length >= 2) {
-          const lastVal = river.historicalData[river.historicalData.length - 1].y;
-          const prevVal = river.historicalData[river.historicalData.length - 2].y;
-          const diff = lastVal - prevVal;
-          if (diff > 0.005) {
-            trendText = "Rising";
-          } else if (diff < -0.005) {
-            trendText = "Falling";
-          }
+          const eps = 0.01;
+          if (diff > eps) trendText = "Rising";
+          else if (diff < -eps) trendText = "Falling";
         }
 
         return (
@@ -461,11 +452,17 @@ export function AIAssistantInterface() {
             }
           }
 
+          const resolvedText =
+            (finalText && finalText.trim())
+              ? finalText
+              : "AI response unavailable right now (model/provider error). Please check API keys / quota and try again.";
+
           updateAssistant({
-            text: finalText || "No response content received.",
+            text: resolvedText,
             thinking: thinkingText || "",
             weatherData: fetchedData,
-            isStreaming: false
+            isStreaming: false,
+            status: ""
           });
         };
 
@@ -1366,7 +1363,7 @@ function AIThinkingToggle({ content, defaultExpanded = false }) {
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors bg-neutral-100 dark:bg-zinc-800/80 hover:bg-neutral-200 dark:hover:bg-zinc-700 px-3.5 py-1.5 rounded-full shadow-sm cursor-pointer"
       >
-        <BrainCircuit className="w-3.5 h-3.5" />
+       
         <span>{isExpanded ? "Hide thought process" : "View thought process"}</span>
         {isExpanded ? (
           <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />

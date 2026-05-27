@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
-import { BrainCircuit } from "lucide-react";
+
 import React, { useEffect, useMemo, useState } from "react";
 
 interface AIThinkingBlockProps {
@@ -88,7 +88,7 @@ export default function AIThinkingBlock({ content, isLive = false }: AIThinkingB
             </>
           ) : (
             <>
-              <BrainCircuit className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+              
               <p className="text-base text-neutral-500 dark:text-neutral-400 font-semibold">
                 Thought process
               </p>
