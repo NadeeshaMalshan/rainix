@@ -90,19 +90,19 @@ memory = MemorySaver()
 agent_prompt = (
     "You are rainiX AI, an elite real-time weather and river flood safety assistant.\n\n"
     "Your mission is to perform comprehensive, high-quality safety assessments. "
-    "When a user asks about flood risks, river safety, or whether they should worry about a river (e.g., Kalu Ganga) tonight:\n"
-    "1. **Locate the River**: Use the tools to find out which city/region the river is located in (e.g., Kalu Ganga is associated with Ratnapura, Millakanda, etc.).\n"
-    "2. **Check River Telemetry**: Call `river_tool` for that region/river to get the current level, historical water level readings, and alert thresholds (Alert, Minor, Major, Critical).\n"
+    "When a user asks about flood risks, river safety, or whether they should worry about a river tonight:\n"
+    "1. **Locate the River**: Use the tools to find out which city/region the river is located in.\n"
+    "2. **Check River Telemetry**: Call `river_tool` for that region/river to get the current level, historical water level readings, river is rising, falling or stable, and alert thresholds (Alert, Minor, Major, Critical).\n"
     "3. **Check Weather Forecast**: Call `weather_tool` for the associated city/region to analyze the current weather, precipitation, and specifically the hourly rain/precipitation probability forecast for tonight.\n"
-    "4. **Analyze the Risk**: Synthesize the two data points: if the river water level is high (near or above Alert/Minor thresholds) AND the forecast predicts heavy rain or high precipitation probability tonight, report an elevated risk. Otherwise, if the weather is clear and levels are normal, reassure the user.\n\n"
+    "4. **Analyze the Risk**: Synthesize the two data points: if the river water level is high (near or above Alert/Minor thresholds)AND river status (rising/falling/stable) AND speed of rising, falling AND the forecast predicts heavy rain or high precipitation probability tonight, report an elevated risk. Otherwise, if the weather is clear and levels are normal, reassure the user.\n\n"
     "Formatting Rules:\n"
     "- Formulate a friendly, highly professional, and reassuring final response using clear bullet lists and bold text for telemetry details.\n"
     "- If any tool returns empty/null, do not loop or call it repeatedly; state that the specific metric was unavailable and continue with the remaining data."
     "\n\n"
     "OUTPUT FORMAT (return exactly this, nothing else):\n"
-    "<thinking>\n"
+    "<thought>\n"
     "Write your step-by-step reasoning here, including tool usage rationale.\n"
-    "</thinking>\n"
+    "</thought>\n"
     "<final>\n"
     "Write the user-facing answer here.\n"
     "</final>\n"
@@ -110,6 +110,7 @@ agent_prompt = (
 
 
 _THINKING_RE = re.compile(r"<thinking>(.*?)</thinking>", re.DOTALL | re.IGNORECASE)
+_THOUGHT_RE = re.compile(r"<thought>(.*?)</thought>", re.DOTALL | re.IGNORECASE)
 _FINAL_RE = re.compile(r"<final>(.*?)</final>", re.DOTALL | re.IGNORECASE)
 
 
@@ -117,11 +118,48 @@ def _extract_thinking_final(text: str):
     if not isinstance(text, str):
         return "", ""
     t_match = _THINKING_RE.search(text)
+    if not t_match:
+        t_match = _THOUGHT_RE.search(text)
     f_match = _FINAL_RE.search(text)
     thinking = (t_match.group(1).strip() if t_match else "")
     final = (f_match.group(1).strip() if f_match else "")
     if not thinking and not final:
         return "", text.strip()
+    return thinking, final
+
+
+def _extract_partials(buffer: str):
+    """Return (thinking_partial, final_partial) if tags have started; otherwise empty strings.
+
+    This is designed for streaming so the UI doesn't show the final answer before it exists.
+    """
+    if not isinstance(buffer, str) or not buffer:
+        return "", ""
+
+    lower = buffer.lower()
+
+    thinking = ""
+    t_start = lower.find("<thinking>")
+    t_end = lower.find("</thinking>")
+    if t_start == -1:
+        t_start = lower.find("<thought>")
+        t_end = lower.find("</thought>")
+        t_tag_len = len("<thought>")
+    else:
+        t_tag_len = len("<thinking>")
+    if t_start != -1:
+        start = t_start + t_tag_len
+        end = t_end if t_end != -1 else len(buffer)
+        thinking = buffer[start:end].strip()
+
+    final = ""
+    f_start = lower.find("<final>")
+    f_end = lower.find("</final>")
+    if f_start != -1:
+        start = f_start + len("<final>")
+        end = f_end if f_end != -1 else len(buffer)
+        final = buffer[start:end].strip()
+
     return thinking, final
 
 agent_google = create_react_agent(
@@ -301,7 +339,7 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                             token = getattr(chunk, "content", "") or ""
                         if token:
                             buffer += token
-                            thinking, final = _extract_thinking_final(buffer)
+                            thinking, final = _extract_partials(buffer)
                             if thinking != last_thinking:
                                 last_thinking = thinking
                                 yield "event: thinking\ndata: " + json.dumps({"content": last_thinking}) + "\n\n"

@@ -1152,7 +1152,7 @@ export function AIAssistantInterface() {
                     // Assistant response (Plain text with action row)
                     <div className="w-full flex flex-col items-start gap-3">
                       {msg.isStructured && msg.thinking && (
-                        <AIThinkingToggle content={msg.thinking} />
+                        <AIThinkingToggle content={msg.thinking} defaultExpanded={!!msg.isStreaming} />
                       )}
                       <div className="text-gray-900 dark:text-neutral-100 text-base max-w-2xl leading-relaxed">
                         {renderFormattedText(msg.text)}
@@ -1352,8 +1352,8 @@ export function AIAssistantInterface() {
   );
 }
 
-function AIThinkingToggle({ content }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+function AIThinkingToggle({ content, defaultExpanded = false }) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
     <div className="w-full flex flex-col items-start mb-2">
