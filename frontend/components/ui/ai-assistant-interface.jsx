@@ -413,120 +413,108 @@ export function AIAssistantInterface() {
       try {
         // FastAPI server URL from environment variables or fallback
         const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-        const response = await fetch(`${aiApiUrl}/chat?q=${encodeURIComponent(userText)}&session_id=${sessionIdRef.current}&provider=${modelProvider}`);
-        if (!response.ok) {
-          throw new Error("Failed to connect to FastAPI backend");
-        }
-        const data = await response.json();
-        
-        let responseText = "";
-        let thinkingText = "";
-        let textContent = "";
-        let isStructured = false;
-
-        if (data && data.response) {
-          // 1. Direct JSON array (from Native Gemini/Gemma thinking blocks)
-          if (Array.isArray(data.response) && data.response.length > 0) {
-            if (data.response.every(item => typeof item === "string")) {
-              if (data.response.length >= 2) {
-                thinkingText = data.response[0];
-                textContent = data.response[1];
-                isStructured = true;
-              } else {
-                textContent = data.response[0];
-                isStructured = true;
-              }
-            } else {
-              const thinkingObj = data.response.find(item => item.type === "thinking");
-              const textObj = data.response.find(item => item.type === "text");
-              if (thinkingObj || textObj) {
-                thinkingText = thinkingObj ? (thinkingObj.thinking || thinkingObj.text || "") : "";
-                textContent = textObj ? (textObj.text || textObj.content || "") : "";
-                isStructured = true;
-              }
-            }
-          }
-
-          if (!isStructured) {
-            if (typeof data.response === "string") {
-              responseText = data.response;
-            } else if (typeof data.response === "object") {
-              if (data.response.content) {
-                responseText = typeof data.response.content === "string" 
-                  ? data.response.content 
-                  : JSON.stringify(data.response.content);
-              } else if (data.response.thinking) {
-                responseText = typeof data.response.thinking === "string"
-                  ? data.response.thinking
-                  : JSON.stringify(data.response.thinking);
-              } else {
-                responseText = JSON.stringify(data.response, null, 2);
-              }
-            } else {
-              responseText = String(data.response);
-            }
-
-            // 2. Stringified JSON array fallback
-            try {
-              const trimmed = responseText.trim();
-              if (trimmed.startsWith("[")) {
-                const parsed = JSON.parse(trimmed);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  if (parsed.every(item => typeof item === "string")) {
-                    if (parsed.length >= 2) {
-                      thinkingText = parsed[0];
-                      textContent = parsed[1];
-                      isStructured = true;
-                    } else {
-                      textContent = parsed[0];
-                      isStructured = true;
-                    }
-                  } else {
-                    const thinkingObj = parsed.find(item => item.type === "thinking");
-                    const textObj = parsed.find(item => item.type === "text");
-                    if (thinkingObj || textObj) {
-                      thinkingText = thinkingObj ? (thinkingObj.thinking || thinkingObj.text || "") : "";
-                      textContent = textObj ? (textObj.text || textObj.content || "") : "";
-                      isStructured = true;
-                    }
-                  }
-                }
-              }
-            } catch (e) {
-              // Not a JSON array, fallback to raw response text
-            }
-          }
-        } else {
-          responseText = "No response content received.";
-        }
-
-        // Detect discussed city and fetch live details asynchronously
-        const detected = detectCity(userText, isStructured ? textContent : responseText);
-        let fetchedData = null;
-        if (detected) {
-          try {
-            const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-            const res = await fetch(`${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`);
-            const json = await res.json();
-            if (json.success && json.data) {
-              fetchedData = json.data;
-            }
-          } catch (fetchErr) {
-            console.error("Failed to fetch weather cards for AI context:", fetchErr);
-          }
-        }
-
-        const assistantMsg = {
-          id: Date.now() + 1,
+        // Add a streaming assistant placeholder message immediately
+        const assistantId = Date.now() + 1;
+        const placeholderMsg = {
+          id: assistantId,
           sender: "assistant",
-          text: isStructured ? textContent : responseText,
-          thinking: isStructured ? thinkingText : "",
-          isStructured: isStructured,
+          text: "",
+          thinking: "",
+          isStructured: true,
           feedback: null,
           userQuery: userText,
-          weatherData: fetchedData
+          weatherData: null,
+          isStreaming: true
         };
-        setMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => [...prev, placeholderMsg]);
+
+        const streamUrl = `${aiApiUrl}/chat/stream?q=${encodeURIComponent(userText)}&session_id=${sessionIdRef.current}&provider=${modelProvider}`;
+        const es = new EventSource(streamUrl);
+
+        let finalText = "";
+        let thinkingText = "";
+        let statusLine = "";
+
+        const updateAssistant = (patch) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, ...patch } : m))
+          );
+        };
+
+        const finish = async (thinking, final) => {
+          es.close();
+          thinkingText = thinking ?? thinkingText;
+          finalText = final ?? finalText;
+
+          // Fetch weather cards after we know the final assistant text
+          const detected = detectCity(userText, finalText || "");
+          let fetchedData = null;
+          if (detected) {
+            try {
+              const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+              const res = await fetch(`${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`);
+              const json = await res.json();
+              if (json.success && json.data) fetchedData = json.data;
+            } catch (fetchErr) {
+              console.error("Failed to fetch weather cards for AI context:", fetchErr);
+            }
+          }
+
+          updateAssistant({
+            text: finalText || "No response content received.",
+            thinking: thinkingText || "",
+            weatherData: fetchedData,
+            isStreaming: false
+          });
+        };
+
+        es.addEventListener("meta", (e) => {
+          // optional: could display provider info later
+        });
+
+        es.addEventListener("status", (e) => {
+          try {
+            const payload = JSON.parse(e.data);
+            statusLine = payload.content || "";
+            const mergedThinking = [thinkingText, statusLine].filter(Boolean).join("\n");
+            updateAssistant({ thinking: mergedThinking });
+          } catch (_) {}
+        });
+
+        es.addEventListener("thinking", (e) => {
+          try {
+            const payload = JSON.parse(e.data);
+            thinkingText = payload.content || "";
+            const mergedThinking = [thinkingText, statusLine].filter(Boolean).join("\n");
+            updateAssistant({ thinking: mergedThinking });
+          } catch (_) {}
+        });
+
+        es.addEventListener("final_partial", (e) => {
+          try {
+            const payload = JSON.parse(e.data);
+            finalText = payload.content || "";
+            updateAssistant({ text: finalText });
+          } catch (_) {}
+        });
+
+        es.addEventListener("done", async (e) => {
+          try {
+            const payload = JSON.parse(e.data);
+            await finish(payload.thinking, payload.final);
+          } catch (_) {
+            await finish(thinkingText, finalText);
+          }
+        });
+
+        es.addEventListener("error", async (e) => {
+          es.close();
+          updateAssistant({
+            text: "Unable to connect to rainiX AI backend stream.",
+            isStreaming: false
+          });
+          throw new Error("Failed to connect to FastAPI backend stream");
+        });
       } catch (error) {
         console.error("Error communicating with AI/main.py:", error);
         
@@ -1246,15 +1234,6 @@ export function AIAssistantInterface() {
                   )}
                 </motion.div>
               ))}
-              {isLoading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="w-full flex justify-start"
-                >
-                  <LiveThinkingToggle />
-                </motion.div>
-              )}
             </AnimatePresence>
             <div ref={chatEndRef} />
           </div>
@@ -1411,31 +1390,14 @@ function AIThinkingToggle({ content }) {
 function LiveThinkingToggle() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [timer, setTimer] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
-
-  const steps = [
-    "Establishing secure socket handshake with rainiX AI intelligence gateway...",
-    "Querying LangGraph agent structure for meteorological reasoning steps...",
-    "Triggering location_tool to search for localized river stations and urban centers...",
-    "Connecting to live weather API to fetch precipitation forecasts and hourly telemetry...",
-    "Triggering river_tool to gather water level fluctuations and station flood boundaries...",
-    "Synthesizing weather data with real-time river alert parameters...",
-    "Formulating unified safety warning and compiling dynamic chart matrices...",
-    "Formatting final reassuring response and preparing visualization modules..."
-  ];
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
       setTimer((prev) => prev + 1);
     }, 1000);
 
-    const stepInterval = setInterval(() => {
-      setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
-    }, 2800);
-
     return () => {
       clearInterval(timerInterval);
-      clearInterval(stepInterval);
     };
   }, []);
 
@@ -1466,7 +1428,7 @@ function LiveThinkingToggle() {
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden w-full mt-2"
           >
-            <AIThinkingBlock content={steps[currentStep]} isLive={true} />
+            <AIThinkingBlock content={"Waiting for live reasoning…"} isLive={true} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from langchain_google_genai import (ChatGoogleGenerativeAI)
 from langchain_openai import ChatOpenAI
@@ -10,6 +11,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from tools.weather_tool import (get_city_weather)
 from tools.river_tool import (get_river_alerts)
 from tools.location_tool import (find_rivers)
+import asyncio
+import json
+import re
 
 
 load_dotenv()
@@ -26,22 +30,26 @@ app.add_middleware(
 
 llm_google = ChatGoogleGenerativeAI(
     model='gemini-3.5-flash',
-    temperature=0.2
+    temperature=0.2,
+    streaming=True
 )
 
 llm_gem3 = ChatGoogleGenerativeAI(
     model='gemini-3.1-flash-lite',
-    temperature=0.2
+    temperature=0.2,
+    streaming=True
 )
 
 llm_gemma = ChatGoogleGenerativeAI(
     model='gemma-4-31b-it',
-    temperature=0.2
+    temperature=0.2,
+    streaming=True
 )
 
 llm_openai = ChatOpenAI(
     model='gpt-4o-mini',
-    temperature=0.2
+    temperature=0.2,
+    streaming=True
 )
 
 @tool
@@ -90,7 +98,31 @@ agent_prompt = (
     "Formatting Rules:\n"
     "- Formulate a friendly, highly professional, and reassuring final response using clear bullet lists and bold text for telemetry details.\n"
     "- If any tool returns empty/null, do not loop or call it repeatedly; state that the specific metric was unavailable and continue with the remaining data."
+    "\n\n"
+    "OUTPUT FORMAT (return exactly this, nothing else):\n"
+    "<thinking>\n"
+    "Write your step-by-step reasoning here, including tool usage rationale.\n"
+    "</thinking>\n"
+    "<final>\n"
+    "Write the user-facing answer here.\n"
+    "</final>\n"
 )
+
+
+_THINKING_RE = re.compile(r"<thinking>(.*?)</thinking>", re.DOTALL | re.IGNORECASE)
+_FINAL_RE = re.compile(r"<final>(.*?)</final>", re.DOTALL | re.IGNORECASE)
+
+
+def _extract_thinking_final(text: str):
+    if not isinstance(text, str):
+        return "", ""
+    t_match = _THINKING_RE.search(text)
+    f_match = _FINAL_RE.search(text)
+    thinking = (t_match.group(1).strip() if t_match else "")
+    final = (f_match.group(1).strip() if f_match else "")
+    if not thinking and not final:
+        return "", text.strip()
+    return thinking, final
 
 agent_google = create_react_agent(
     llm_google,
@@ -169,8 +201,9 @@ def chat(q: str, session_id: str = "default", provider: str = "google"):
                 ]
             }, config=config)
             final_message = response["messages"][-1].content
+            thinking, final = _extract_thinking_final(final_message)
             return {
-                "response": final_message,
+                "response": [thinking, final],
                 "provider": prov,
                 "switched": prov != fallback_order[0]
             }
@@ -223,6 +256,78 @@ def chat(q: str, session_id: str = "default", provider: str = "google"):
         "response": diagnostic,
         "provider": "failed"
     }
+
+
+@app.get("/chat/stream")
+async def chat_stream(q: str, session_id: str = "default", provider: str = "google"):
+    config = {"configurable": {"thread_id": session_id}}
+
+    agents = {
+        "google": agent_google,
+        "gem3": agent_gem3,
+        "gemma": agent_gemma,
+        "openai": agent_openai
+    }
+
+    if provider == "auto":
+        fallback_order = ["google", "gem3", "gemma", "openai"]
+    elif provider in agents:
+        others = [k for k in ["google", "gem3", "gemma", "openai"] if k != provider]
+        fallback_order = [provider] + others
+    else:
+        fallback_order = ["google", "gem3", "gemma", "openai"]
+
+    async def event_gen():
+        errors = {}
+        for prov in fallback_order:
+            try:
+                active_agent = agents[prov]
+
+                buffer = ""
+                last_thinking = ""
+                last_final = ""
+
+                yield "event: meta\ndata: " + json.dumps({"provider": prov}) + "\n\n"
+
+                async for ev in active_agent.astream_events(
+                    {"messages": [("user", q)]},
+                    config=config,
+                    version="v1",
+                ):
+                    if ev.get("event") == "on_chat_model_stream":
+                        chunk = ev.get("data", {}).get("chunk")
+                        token = ""
+                        if chunk is not None:
+                            token = getattr(chunk, "content", "") or ""
+                        if token:
+                            buffer += token
+                            thinking, final = _extract_thinking_final(buffer)
+                            if thinking != last_thinking:
+                                last_thinking = thinking
+                                yield "event: thinking\ndata: " + json.dumps({"content": last_thinking}) + "\n\n"
+                            if final != last_final:
+                                last_final = final
+                                yield "event: final_partial\ndata: " + json.dumps({"content": last_final}) + "\n\n"
+                    elif ev.get("event") == "on_tool_start":
+                        name = ev.get("name") or "tool"
+                        yield "event: status\ndata: " + json.dumps({"content": f"Calling {name}..."}) + "\n\n"
+                    elif ev.get("event") == "on_tool_end":
+                        name = ev.get("name") or "tool"
+                        yield "event: status\ndata: " + json.dumps({"content": f"Finished {name}."}) + "\n\n"
+
+                # Flush final from buffer (if tags present)
+                thinking, final = _extract_thinking_final(buffer)
+                yield "event: done\ndata: " + json.dumps({"thinking": thinking, "final": final}) + "\n\n"
+                return
+            except Exception as e:
+                errors[prov] = str(e)
+                yield "event: status\ndata: " + json.dumps({"content": f"Provider {prov} failed, trying next..."}) + "\n\n"
+                await asyncio.sleep(0.05)
+
+        diagnostic = "All providers failed.\n" + json.dumps(errors, indent=2)
+        yield "event: error\ndata: " + json.dumps({"message": diagnostic}) + "\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
     
     
 @app.get("/feedback")
