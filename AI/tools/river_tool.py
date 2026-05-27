@@ -3,7 +3,7 @@ import os
 def get_river_alerts(city):
     
     try:
-        node_api_url = os.getenv("NODE_API_URL", "http://localhost:5000")
+        node_api_url = os.getenv("NODE_API_URL", "http://localhost:5000").rstrip("/")
         url = (f"{node_api_url}/api/rivers/{city}")
         response = requests.get(url)
 
