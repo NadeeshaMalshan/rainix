@@ -424,7 +424,8 @@ export function AIAssistantInterface() {
           feedback: null,
           userQuery: userText,
           weatherData: null,
-          isStreaming: true
+          isStreaming: true,
+          status: "Working…"
         };
         setMessages((prev) => [...prev, placeholderMsg]);
 
@@ -433,7 +434,7 @@ export function AIAssistantInterface() {
 
         let finalText = "";
         let thinkingText = "";
-        let statusLine = "";
+        let statusLine = "Working…";
 
         const updateAssistant = (patch) => {
           setMessages((prev) =>
@@ -476,8 +477,7 @@ export function AIAssistantInterface() {
           try {
             const payload = JSON.parse(e.data);
             statusLine = payload.content || "";
-            const mergedThinking = [thinkingText, statusLine].filter(Boolean).join("\n");
-            updateAssistant({ thinking: mergedThinking });
+            updateAssistant({ status: statusLine });
           } catch (_) {}
         });
 
@@ -485,8 +485,7 @@ export function AIAssistantInterface() {
           try {
             const payload = JSON.parse(e.data);
             thinkingText = payload.content || "";
-            const mergedThinking = [thinkingText, statusLine].filter(Boolean).join("\n");
-            updateAssistant({ thinking: mergedThinking });
+            updateAssistant({ thinking: thinkingText, status: thinkingText ? "Thinking…" : statusLine });
           } catch (_) {}
         });
 
@@ -1151,8 +1150,14 @@ export function AIAssistantInterface() {
                   ) : (
                     // Assistant response (Plain text with action row)
                     <div className="w-full flex flex-col items-start gap-3">
-                      {msg.isStructured && (msg.thinking || msg.isStreaming) && (
-                        <AIThinkingToggle content={msg.thinking || ""} defaultExpanded={!!msg.isStreaming} />
+                      {msg.isStreaming && (
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-neutral-400 bg-neutral-100 dark:bg-zinc-800/80 px-3.5 py-1.5 rounded-full shadow-sm">
+                          <Loader size={"xs"} className="text-neutral-500 dark:text-neutral-300" />
+                          <span>{msg.status || "Working…"}</span>
+                        </div>
+                      )}
+                      {msg.isStructured && msg.thinking && (
+                        <AIThinkingToggle content={msg.thinking} defaultExpanded={false} />
                       )}
                       <div className="text-gray-900 dark:text-neutral-100 text-base max-w-2xl leading-relaxed">
                         {renderFormattedText(msg.text)}
