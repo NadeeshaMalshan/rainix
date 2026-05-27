@@ -320,6 +320,8 @@ export function AIAssistantInterface() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
   const [modelProvider, setModelProvider] = useState("auto");
+  const activeEventSourceRef = useRef(null);
+  const activeStreamStateRef = useRef({ assistantId: null, userText: "", finalText: "", thinkingText: "" });
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("rainix_theme") || "dark";
@@ -422,10 +424,12 @@ export function AIAssistantInterface() {
 
         const streamUrl = `${aiApiUrl}/chat/stream?q=${encodeURIComponent(userText)}&session_id=${sessionIdRef.current}&provider=${modelProvider}`;
         const es = new EventSource(streamUrl);
+        activeEventSourceRef.current = es;
 
         let finalText = "";
         let thinkingText = "";
         let statusLine = "Working…";
+        activeStreamStateRef.current = { assistantId, userText, finalText: "", thinkingText: "" };
 
         const updateAssistant = (patch) => {
           setMessages((prev) =>
@@ -482,6 +486,7 @@ export function AIAssistantInterface() {
           try {
             const payload = JSON.parse(e.data);
             thinkingText = payload.content || "";
+            activeStreamStateRef.current.thinkingText = thinkingText;
             updateAssistant({ thinking: thinkingText, status: thinkingText ? "Thinking…" : statusLine });
           } catch (_) {}
         });
@@ -490,6 +495,7 @@ export function AIAssistantInterface() {
           try {
             const payload = JSON.parse(e.data);
             finalText = payload.content || "";
+            activeStreamStateRef.current.finalText = finalText;
             updateAssistant({ text: finalText });
           } catch (_) {}
         });
@@ -501,10 +507,12 @@ export function AIAssistantInterface() {
           } catch (_) {
             await finish(thinkingText, finalText);
           }
+          activeEventSourceRef.current = null;
         });
 
         es.addEventListener("error", async (e) => {
           es.close();
+          activeEventSourceRef.current = null;
           updateAssistant({
             text: "Unable to connect to rainiX AI backend stream.",
             isStreaming: false
@@ -545,6 +553,35 @@ export function AIAssistantInterface() {
         setIsLoading(false);
       }
     }
+  };
+
+  const stopStreaming = () => {
+    const es = activeEventSourceRef.current;
+    if (es) {
+      try {
+        es.close();
+      } catch (_) {}
+      activeEventSourceRef.current = null;
+    }
+
+    const { assistantId, finalText, thinkingText } = activeStreamStateRef.current || {};
+    if (assistantId) {
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== assistantId) return m;
+          const resolvedText = (finalText && finalText.trim()) ? finalText : "Stopped.";
+          return {
+            ...m,
+            text: resolvedText,
+            thinking: thinkingText || m.thinking || "",
+            isStreaming: false,
+            status: ""
+          };
+        })
+      );
+    }
+
+    setIsLoading(false);
   };
 
   const handleSendMessage = () => {
@@ -685,26 +722,21 @@ export function AIAssistantInterface() {
           
           {/* White circle audio action button (ChatGPT wave representation) */}
           <button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
+            onClick={isLoading ? stopStreaming : handleSendMessage}
+            disabled={!isLoading && !inputValue.trim()}
             className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-              inputValue.trim()
+              (isLoading || inputValue.trim())
                 ? "bg-white dark:bg-white text-black dark:text-black shadow-md hover:scale-105 active:scale-95 cursor-pointer"
                 : "bg-white dark:bg-white text-black dark:text-black opacity-90 cursor-default"
             }`}
-            title="Send message"
+            title={isLoading ? "Stop" : "Send message"}
           >
-            {inputValue.trim() ? (
-              <ArrowUp className="w-5 h-5 stroke-[2.5]" />
-            ) : (
-              // Perfect Soundwave representation inside circle
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none">
-                <line x1="4" y1="12" x2="4" y2="12" />
-                <line x1="8" y1="9" x2="8" y2="15" />
-                <line x1="12" y1="6" x2="12" y2="18" />
-                <line x1="16" y1="9" x2="16" y2="15" />
-                <line x1="20" y1="12" x2="20" y2="12" />
+            {isLoading ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <rect x="7" y="7" width="10" height="10" rx="2" />
               </svg>
+            ) : (
+              <ArrowUp className="w-5 h-5 stroke-[2.5]" />
             )}
           </button>
         </div>
