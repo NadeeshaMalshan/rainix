@@ -28,15 +28,321 @@ import { motion, AnimatePresence } from "framer-motion";
 import AIThinkingBlock from "./ai-thinking-block";
 import { Loader } from "./loader";
 
+const knownCities = [
+  "colombo", "kelaniya", "kaduwela", "hanwella", "mapitigama", "pugoda", "ruwanwella", 
+  "avissawella", "wellampitiya", "kolonnawa", "ratnapura", "millakanda", "putupaula", 
+  "kalutara", "kuruvita", "kuruwita", "ayagama", "pelmadulla", "kalawana", "kahawaththa", 
+  "kahawatta", "elapatha", "matara", "bangama", "polothugama", "hulandawa", "warapitiya", 
+  "kekiriobada", "peradeniya", "kandy", "gampola", "teldeniya", "katugastota", "chilaw", 
+  "kurunegala", "ridibendiella", "sengaloya", "puttalam", "wanathawilluwa", "pahariya", 
+  "anuradhapura", "vavuniya", "rambewa", "poonawa", "trincomalee", "habarana", "ampara", 
+  "batticaloa", "gampaha", "wattala", "miriswatta", "badulla", "tokyo", "sydney", "london"
+];
+
+const detectCity = (userText, assistantText) => {
+  const combined = `${userText} ${assistantText || ""}`.toLowerCase();
+  
+  const cleanUser = userText.trim().toLowerCase();
+  const greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "howdy", "yo", "hi there", "hello there"];
+  if (greetings.includes(cleanUser) || cleanUser.length <= 3) {
+    return null;
+  }
+  
+  for (const city of knownCities) {
+    const regex = new RegExp(`\\b${city}\\b`, 'i');
+    if (regex.test(combined)) {
+      return city.charAt(0).toUpperCase() + city.slice(1);
+    }
+  }
+  if (combined.includes("kalu ganga") || combined.includes("kalu")) return "Ratnapura";
+  if (combined.includes("kelani ganga") || combined.includes("kelani")) return "Colombo";
+  if (combined.includes("nilwala ganga") || combined.includes("nilwala")) return "Matara";
+  if (combined.includes("mahaweli")) return "Kandy";
+  return null;
+};
+
+const getWeatherDetails = (code) => {
+  if (code === 0) return { label: 'Sunny', icon: 'wb_sunny' };
+  if (code >= 1 && code <= 3) return { label: 'Partly Cloudy', icon: 'cloud_queue' };
+  if (code === 45 || code === 48) return { label: 'Fog', icon: 'filter_drama' }; 
+  if (code >= 51 && code <= 57) return { label: 'Light Rain', icon: 'grain' };
+  if (code >= 61 && code <= 67) return { label: 'Rain', icon: 'rainy' }; 
+  if (code >= 71 && code <= 77) return { label: 'Snow', icon: 'ac_unit' }; 
+  if (code >= 80 && code <= 82) return { label: 'Showers', icon: 'umbrella' };
+  if (code >= 85 && code <= 86) return { label: 'Snow Showers', icon: 'weather_snowy' }; 
+  if (code >= 95) return { label: 'Thunderstorms', icon: 'thunderstorm' };
+  return { label: 'Cloudy', icon: 'cloud' };
+};
+
+function AICurrentWeatherCard({ data }) {
+  if (!data || !data.weather) return null;
+  const weather = data.weather.weather;
+  const details = getWeatherDetails(weather.weatherCode);
+  const temp = Math.round(weather.temperature);
+  
+  return (
+    <div className="w-full max-w-md bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-5 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
+      {/* 60% base deep dark canvas / 30% secondary headers */}
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h4 className="font-semibold text-lg leading-tight text-gray-900 dark:text-neutral-100">{data.weather.city || data.city}</h4>
+          <span className="text-xs text-gray-500 dark:text-neutral-400 opacity-80 font-normal">{data.weather.country || 'Sri Lanka'}</span>
+        </div>
+        {/* 10% Accent: Sky Blue Header Icon */}
+        <span className="material-symbols-outlined text-3xl text-sky-500 dark:text-sky-400">{details.icon}</span>
+      </div>
+      
+      {/* 10% Accent: Vibrant main temperature */}
+      <div className="flex items-baseline gap-2.5 mb-3">
+        <span className="text-4xl font-normal tracking-tight font-poppins text-sky-500 dark:text-sky-400">{temp}°C</span>
+        <span className="text-sm font-semibold text-sky-600 dark:text-sky-400/90">{details.label}</span>
+      </div>
+      
+      {/* 30% Secondary: Muted grid styling and icons */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-neutral-200/50 dark:border-zinc-800/70 pt-3 text-xs md:text-sm font-medium">
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+          <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">thermostat</span>
+          <span>Feels Like: {Math.round(weather.feelsLike)}°C</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+          <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">water_drop</span>
+          <span>Humidity: {weather.humidity}%</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+          <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">air</span>
+          <span>Wind: {weather.windSpeed} km/h</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+          <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">visibility</span>
+          <span>Visibility: {(weather.visibility / 1000).toFixed(1)} km</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AIHourlyForecastCard({ data }) {
+  if (!data || !data.weather || !data.weather.weather || !data.weather.weather.hourly) return null;
+  const hourly = data.weather.weather.hourly;
+  
+  return (
+    <div className="w-full max-w-lg bg-neutral-100/90 dark:bg-zinc-900/60 backdrop-blur-md rounded-2xl p-4 border border-neutral-200/50 dark:border-zinc-800/60 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
+      <h4 className="font-bold text-sm text-sky-600 dark:text-sky-400 mb-3 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+        <span className="material-symbols-outlined text-sm">schedule</span>
+        24-Hour Hourly Forecast
+      </h4>
+      <div className="flex overflow-x-auto gap-3.5 pb-2 scrollbar-thin pl-1">
+        {hourly.map((h, idx) => {
+          const details = getWeatherDetails(h.weatherCode);
+          let timeLabel = "12:00";
+          if (h.time && h.time.includes('T')) {
+            timeLabel = h.time.split('T')[1].substring(0, 5);
+          }
+          return (
+            <div key={idx} className="flex flex-col items-center gap-1.5 bg-neutral-200/50 dark:bg-zinc-800/50 border border-neutral-300/30 dark:border-zinc-700/30 rounded-xl py-2.5 px-3 min-w-[70px] flex-shrink-0 transition-transform hover:scale-[1.03]">
+              <span className="text-xs font-semibold opacity-70">{timeLabel}</span>
+              <span className="material-symbols-outlined text-xl text-sky-500 dark:text-sky-400">{details.icon}</span>
+              <span className="text-sm font-extrabold">{Math.round(h.temperature)}°</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AIRiverTelemetryCard({ data }) {
+  if (!data || !data.rivers || data.rivers.length === 0) return null;
+  
+  return (
+    <div className="w-full flex flex-row flex-wrap gap-4 mt-3 animate-fade-in-up">
+      {data.rivers.map((river, idx) => {
+        const hasHistory = river.historicalData && river.historicalData.length > 0;
+        const currentLevel = hasHistory ? river.historicalData[river.historicalData.length - 1].y : null;
+        const isAlert = river.status === "ALERT";
+        
+        let pointsString = "";
+        let fillPointsString = "";
+        let minVal = 0;
+        let maxVal = 10;
+        let minX = 0;
+        let maxX = 1;
+        
+        if (hasHistory) {
+          const yValues = river.historicalData.map(p => p.y);
+          const xValues = river.historicalData.map((_, i) => i);
+          minVal = Math.min(...yValues);
+          maxVal = Math.max(...yValues);
+          const diff = maxVal - minVal;
+          maxVal = maxVal + (diff > 0 ? diff * 0.15 : 1);
+          minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
+          
+          minX = 0;
+          maxX = xValues.length - 1 || 1;
+          
+          const coords = river.historicalData.map((p, i) => {
+            const xSVG = ((i - minX) / (maxX - minX)) * 340 + 10;
+            const ySVG = 110 - ((p.y - minVal) / (maxVal - minVal)) * 90;
+            return { x: xSVG, y: ySVG };
+          });
+          
+          pointsString = coords.map(c => `${c.x},${c.y}`).join(" ");
+          fillPointsString = `10,110 ${pointsString} 350,110`;
+        }
+        
+        let statusBg = "bg-neutral-100 dark:bg-zinc-800/80 text-gray-900 dark:text-neutral-100 border-neutral-200 dark:border-zinc-700/60";
+        let strokeColor = "currentColor";
+        let gradientId = `gradient-${river.id || idx}`;
+        
+        const yValues = hasHistory ? river.historicalData.map(p => p.y) : [];
+        const maxValFloat = yValues.length > 0 ? Math.max(...yValues) : 0;
+        const avgLevel = yValues.length > 0 ? yValues.reduce((a, b) => a + b, 0) / yValues.length : 0;
+        const lowerName = river.name.toLowerCase();
+        const alertLimitVal = (river.levels && river.levels.alert !== undefined && river.levels.alert !== null)
+          ? Number(river.levels.alert)
+          : (lowerName.includes("kelani") ? 5.00 : lowerName.includes("kalu") ? 4.00 : lowerName.includes("nilwala") ? 4.50 : 4.00);
+
+        let trendText = "Stable";
+        if (hasHistory && river.historicalData.length >= 4) {
+          const lastVal = river.historicalData[river.historicalData.length - 1].y;
+          const prevVal = river.historicalData[river.historicalData.length - 4].y;
+          const diff = lastVal - prevVal;
+          if (diff > 0.01) {
+            trendText = "Rising";
+          } else if (diff < -0.01) {
+            trendText = "Falling";
+          }
+        } else if (hasHistory && river.historicalData.length >= 2) {
+          const lastVal = river.historicalData[river.historicalData.length - 1].y;
+          const prevVal = river.historicalData[river.historicalData.length - 2].y;
+          const diff = lastVal - prevVal;
+          if (diff > 0.005) {
+            trendText = "Rising";
+          } else if (diff < -0.005) {
+            trendText = "Falling";
+          }
+        }
+
+        return (
+          <div key={idx} className="w-full max-w-md bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-5 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
+            {/* 60% base deep dark canvas / 30% secondary headers */}
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h4 className="font-semibold text-lg leading-tight text-gray-900 dark:text-neutral-100">
+                  {river.name.replace(/^(Kelani Ganga|Kalu Ganga|Nilwala Ganga|Gin Ganga)\s*-\s*/i, "")}
+                </h4>
+                <span className="text-xs text-gray-500 dark:text-neutral-400 opacity-80 font-normal">
+                  {lowerName.includes("kelani") ? "Kelani Ganga Basin" : lowerName.includes("kalu") ? "Kalu Ganga Basin" : lowerName.includes("nilwala") ? "Nilwala Ganga Basin" : "Active River Station"}
+                </span>
+              </div>
+              {/* 10% Accent: Pure monochrome layout matching the theme header icon */}
+              <span className="material-symbols-outlined text-3xl text-gray-900 dark:text-neutral-100">
+                waves
+              </span>
+            </div>
+            
+            {/* 10% Accent: High-contrast white/black metrics and labels */}
+            <div className="flex items-baseline gap-2.5 mb-3">
+              <span className="text-4xl font-normal tracking-tight font-poppins text-gray-900 dark:text-neutral-100">
+                {currentLevel !== null ? `${currentLevel.toFixed(2)}m` : 'N/A'}
+              </span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-neutral-100">
+                {river.status === "ALERT" ? "High Alert" : "Safe"}
+              </span>
+            </div>
+            
+            {/* 30% Secondary: Muted grid styling and gray icons */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-neutral-200/50 dark:border-zinc-800/70 pt-3 text-xs md:text-sm font-medium">
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+                <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">warning</span>
+                <span>Alert Limit: {alertLimitVal.toFixed(2)}m</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+                <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">trending_up</span>
+                <span>Peak 24h: {maxValFloat.toFixed(2)}m</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+                <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">analytics</span>
+                <span>Avg Level: {avgLevel.toFixed(2)}m</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
+                <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">show_chart</span>
+                <span>Trend: {trendText}</span>
+              </div>
+            </div>
+            
+            {hasHistory ? (
+              <div className="relative mt-2 border-t border-neutral-200/40 dark:border-zinc-800/40 pt-3">
+                <span className="text-[10px] uppercase font-bold text-neutral-400 dark:text-neutral-500 block mb-2 flex items-center gap-1.5 pl-1">
+                  <span className="material-symbols-outlined text-xs">timeline</span>
+                  24-Hour Telemetry Level History
+                </span>
+                <svg viewBox="0 0 360 120" className="w-full overflow-visible">
+                  <defs>
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={strokeColor} stopOpacity="0.45" />
+                      <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  
+                  <line x1="10" y1="110" x2="350" y2="110" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" />
+                  <line x1="10" y1="65" x2="350" y2="65" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" strokeDasharray="3,3" />
+                  <line x1="10" y1="20" x2="350" y2="20" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" />
+                  
+                  <polygon points={fillPointsString} fill={`url(#${gradientId})`} />
+                  
+                  <polyline
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    points={pointsString}
+                    className="drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                  />
+                  
+                  {river.historicalData.length > 1 && (
+                    <>
+                      <circle cx="10" cy={110 - ((river.historicalData[0].y - minVal) / (maxVal - minVal)) * 90} r="3.5" fill={strokeColor} />
+                      <circle cx="350" cy={110 - ((river.historicalData[river.historicalData.length - 1].y - minVal) / (maxVal - minVal)) * 90} r="4.5" fill={strokeColor} stroke="white" strokeWidth="1.5" />
+                    </>
+                  )}
+                </svg>
+                <div className="flex justify-between text-[9px] opacity-60 mt-1.5 font-mono text-gray-500 dark:text-neutral-400">
+                  <span>-24h</span>
+                  <span>Now</span>
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-xs opacity-50 font-medium bg-neutral-200/20 dark:bg-zinc-800/20 rounded-xl border border-neutral-300/10 dark:border-zinc-700/10">
+                Level telemetry details unavailable
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AIAssistantInterface() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
+  const [modelProvider, setModelProvider] = useState("auto");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("rainix_theme") || "dark";
     setTheme(savedTheme);
     applyTheme(savedTheme);
+
+    const savedProvider = localStorage.getItem("rainix_model_provider") || "auto";
+    setModelProvider(savedProvider);
   }, []);
+
+  const handleModelProviderChange = (newProvider) => {
+    setModelProvider(newProvider);
+    localStorage.setItem("rainix_model_provider", newProvider);
+  };
 
   const applyTheme = (targetTheme) => {
     const root = window.document.documentElement;
@@ -107,7 +413,7 @@ export function AIAssistantInterface() {
       try {
         // FastAPI server URL from environment variables or fallback
         const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-        const response = await fetch(`${aiApiUrl}/chat?q=${encodeURIComponent(userText)}&session_id=${sessionIdRef.current}`);
+        const response = await fetch(`${aiApiUrl}/chat?q=${encodeURIComponent(userText)}&session_id=${sessionIdRef.current}&provider=${modelProvider}`);
         if (!response.ok) {
           throw new Error("Failed to connect to FastAPI backend");
         }
@@ -194,6 +500,22 @@ export function AIAssistantInterface() {
           responseText = "No response content received.";
         }
 
+        // Detect discussed city and fetch live details asynchronously
+        const detected = detectCity(userText, isStructured ? textContent : responseText);
+        let fetchedData = null;
+        if (detected) {
+          try {
+            const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+            const res = await fetch(`${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`);
+            const json = await res.json();
+            if (json.success && json.data) {
+              fetchedData = json.data;
+            }
+          } catch (fetchErr) {
+            console.error("Failed to fetch weather cards for AI context:", fetchErr);
+          }
+        }
+
         const assistantMsg = {
           id: Date.now() + 1,
           sender: "assistant",
@@ -201,20 +523,38 @@ export function AIAssistantInterface() {
           thinking: isStructured ? thinkingText : "",
           isStructured: isStructured,
           feedback: null,
-          userQuery: userText
+          userQuery: userText,
+          weatherData: fetchedData
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (error) {
         console.error("Error communicating with AI/main.py:", error);
         
         // Friendly developer alert/fallback
+        let fallbackText = getAssistantResponse(userText);
+        let fetchedData = null;
+        const detected = detectCity(userText, fallbackText);
+        if (detected) {
+          try {
+            const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+            const res = await fetch(`${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`);
+            const json = await res.json();
+            if (json.success && json.data) {
+              fetchedData = json.data;
+            }
+          } catch (fetchErr) {
+            console.error("Failed to fetch fallback weather cards:", fetchErr);
+          }
+        }
+
         const fallbackMsg = {
           id: Date.now() + 1,
           sender: "assistant",
           isError: true,
-          fallbackText: getAssistantResponse(userText),
+          fallbackText: fallbackText,
           feedback: null,
-          userQuery: userText
+          userQuery: userText,
+          weatherData: fetchedData
         };
         setMessages((prev) => [...prev, fallbackMsg]);
       } finally {
@@ -399,21 +739,139 @@ export function AIAssistantInterface() {
           className="flex items-center gap-2.5 group cursor-pointer hover:opacity-90 transition-opacity"
         >
           {/* Custom Weather and Galaxy logo */}
-          <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center p-1.5 transition-transform group-hover:scale-105">
-            <svg viewBox="0 0 200 200" fill="none" className="w-full h-full text-white dark:text-black">
-              <path
-                d="M 72 142 A 25 25 0 0 1 78 98 A 33 33 0 0 1 138 102 A 25 25 0 0 1 144 142"
-                stroke="currentColor"
-                strokeWidth="18"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center p-1.5 transition-transform group-hover:scale-105">
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
                 fill="none"
-              />
-              <path
-                d="M 108 108 C 108 108 126 138 126 150 C 126 160 118 168 108 168 C 98 168 90 160 90 150 C 90 138 108 108 108 108 Z"
-                fill="currentColor"
-              />
-            </svg>
+                viewBox="0 0 200 200"
+                width="100%"
+                height="100%"
+                className="w-full h-full"
+              >
+                <g clipPath="url(#cs_clip_1_ellipse-12)">
+                  <mask
+                    id="cs_mask_1_ellipse-12"
+                    style={{ maskType: "alpha" }}
+                    width="200"
+                    height="200"
+                    x="0"
+                    y="0"
+                    maskUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d="M 72 142 A 25 25 0 0 1 78 98 A 33 33 0 0 1 138 102 A 25 25 0 0 1 144 142"
+                      stroke="#fff"
+                      strokeWidth="15"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                    <path
+                      d="M 108 108 C 108 108 126 138 126 150 C 126 160 118 168 108 168 C 98 168 90 160 90 150 C 90 138 108 108 108 108 Z"
+                      fill="#fff"
+                    />
+                    <path
+                      d="M 128 40 Q 128 48 136 48 Q 128 48 128 56 Q 128 48 120 48 Q 128 48 128 40 Z"
+                      fill="#fff"
+                    />
+                    <path
+                      d="M 145 49 Q 145 65 161 65 Q 145 65 145 81 Q 145 65 129 65 Q 145 65 145 49 Z"
+                      fill="#fff"
+                    />
+                    <path
+                      d="M 158 75 Q 158 82 165 82 Q 158 82 158 89 Q 158 82 151 82 Q 158 82 158 75 Z"
+                      fill="#fff"
+                    />
+                  </mask>
+                  <g mask="url(#cs_mask_1_ellipse-12)">
+                    {/* Light mode: Blue animated gradient */}
+                    <g className="dark:hidden">
+                      <path fill="#fff" d="M200 0H0v200h200V0z"></path>
+                      <path
+                        fill="#0066FF"
+                        fillOpacity="0.33"
+                        d="M200 0H0v200h200V0z"
+                      ></path>
+                      <g
+                        filter="url(#filter0_f_844_2811)"
+                        className="animate-gradient"
+                      >
+                        <path fill="#0066FF" d="M110 32H18v68h92V32z"></path>
+                        <path fill="#0044FF" d="M188-24H15v98h173v-98z"></path>
+                        <path fill="#0099FF" d="M175 70H5v156h170V70z"></path>
+                        <path fill="#00CCFF" d="M230 51H100v103h130V51z"></path>
+                      </g>
+                    </g>
+                    {/* Dark mode: Solid white logo */}
+                    <rect width="200" height="200" fill="#ffffff" className="hidden dark:block" />
+                  </g>
+                </g>
+                <defs>
+                  <filter
+                    id="filter0_f_844_2811"
+                    width="385"
+                    height="410"
+                    x="-75"
+                    y="-104"
+                    colorInterpolationFilters="sRGB"
+                    filterUnits="userSpaceOnUse"
+                  >
+                    <feFlood floodOpacity="0" result="BackgroundImageFix"></feFlood>
+                    <feBlend
+                      in="SourceGraphic"
+                      in2="BackgroundImageFix"
+                      result="shape"
+                    ></feBlend>
+                    <feGaussianBlur
+                      result="effect1_foregroundBlur_844_2811"
+                      stdDeviation="40"
+                    ></feGaussianBlur>
+                  </filter>
+                  <clipPath id="cs_clip_1_ellipse-12">
+                    <path fill="#fff" d="M0 0H200V200H0z"></path>
+                  </clipPath>
+                </defs>
+                <g
+                  style={{ mixBlendMode: "overlay" }}
+                  mask="url(#cs_mask_1_ellipse-12)"
+                >
+                  <path
+                    fill="gray"
+                    stroke="transparent"
+                    d="M200 0H0v200h200V0z"
+                    filter="url(#cs_noise_1_ellipse-12)"
+                  ></path>
+                </g>
+                <defs>
+                  <filter
+                    id="cs_noise_1_ellipse-12"
+                    width="100%"
+                    height="100%"
+                    x="0%"
+                    y="0%"
+                    filterUnits="objectBoundingBox"
+                  >
+                    <feTurbulence
+                      baseFrequency="0.6"
+                      numOctaves="5"
+                      result="out1"
+                      seed="4"
+                    ></feTurbulence>
+                    <feComposite
+                      in="out1"
+                      in2="SourceGraphic"
+                      operator="in"
+                      result="out2"
+                    ></feComposite>
+                    <feBlend
+                      in="SourceGraphic"
+                      in2="out2"
+                      mode="overlay"
+                      result="out3"
+                    ></feBlend>
+                  </filter>
+                </defs>
+              </svg>
           </div>
           <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-neutral-400 font-poppins">
             rainiX AI
@@ -573,7 +1031,7 @@ export function AIAssistantInterface() {
 
             {/* Welcome message */}
             <div className="text-center mb-8 w-full max-w-2xl px-4">
-              <h1 className="text-3xl font-bold mb-2">
+              <h1 className="text-3xl  mb-2">
                 Welcome to rainiX AI
               </h1>
               <p className="text-gray-500 dark:text-neutral-400 max-w-md mx-auto mb-8">
@@ -625,6 +1083,38 @@ export function AIAssistantInterface() {
                         <span className="text-xs text-amber-600 dark:text-amber-500 uppercase tracking-wider font-bold block mb-1">Fallback Response</span>
                         <div className="text-base text-gray-900 dark:text-neutral-100 leading-relaxed">{renderFormattedText(msg.fallbackText)}</div>
                       </div>
+                      {msg.weatherData && (
+                        <div className="w-full mt-2 flex flex-row flex-wrap items-start gap-4">
+                          {(!msg.userQuery.toLowerCase().includes("24 hour") &&
+                            !msg.userQuery.toLowerCase().includes("24 hrs") &&
+                            !msg.userQuery.toLowerCase().includes("24h") &&
+                            !msg.userQuery.toLowerCase().includes("hourly") &&
+                            !msg.userQuery.toLowerCase().includes("forecast") &&
+                            !msg.userQuery.toLowerCase().includes("river") &&
+                            !msg.userQuery.toLowerCase().includes("flood") &&
+                            !msg.userQuery.toLowerCase().includes("ganga") &&
+                            !msg.userQuery.toLowerCase().includes("water")) && (
+                            <AICurrentWeatherCard data={msg.weatherData} />
+                          )}
+                          
+                          {(msg.userQuery.toLowerCase().includes("24 hour") ||
+                            msg.userQuery.toLowerCase().includes("24 hrs") ||
+                            msg.userQuery.toLowerCase().includes("24h") ||
+                            msg.userQuery.toLowerCase().includes("hourly") ||
+                            msg.userQuery.toLowerCase().includes("forecast") ||
+                            msg.userQuery.toLowerCase().includes("tomorrow")) && (
+                            <AIHourlyForecastCard data={msg.weatherData} />
+                          )}
+                          
+                          {(msg.userQuery.toLowerCase().includes("river") ||
+                            msg.userQuery.toLowerCase().includes("flood") ||
+                            msg.userQuery.toLowerCase().includes("ganga") ||
+                            msg.userQuery.toLowerCase().includes("alert") ||
+                            msg.userQuery.toLowerCase().includes("water")) && (
+                            <AIRiverTelemetryCard data={msg.weatherData} />
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     // Assistant response (Plain text with action row)
@@ -635,6 +1125,39 @@ export function AIAssistantInterface() {
                       <div className="text-gray-900 dark:text-neutral-100 text-base max-w-2xl leading-relaxed">
                         {renderFormattedText(msg.text)}
                       </div>
+                      
+                      {msg.weatherData && (
+                        <div className="w-full mt-2 flex flex-row flex-wrap items-start gap-4">
+                          {(!msg.userQuery.toLowerCase().includes("24 hour") &&
+                            !msg.userQuery.toLowerCase().includes("24 hrs") &&
+                            !msg.userQuery.toLowerCase().includes("24h") &&
+                            !msg.userQuery.toLowerCase().includes("hourly") &&
+                            !msg.userQuery.toLowerCase().includes("forecast") &&
+                            !msg.userQuery.toLowerCase().includes("river") &&
+                            !msg.userQuery.toLowerCase().includes("flood") &&
+                            !msg.userQuery.toLowerCase().includes("ganga") &&
+                            !msg.userQuery.toLowerCase().includes("water")) && (
+                            <AICurrentWeatherCard data={msg.weatherData} />
+                          )}
+                          
+                          {(msg.userQuery.toLowerCase().includes("24 hour") ||
+                            msg.userQuery.toLowerCase().includes("24 hrs") ||
+                            msg.userQuery.toLowerCase().includes("24h") ||
+                            msg.userQuery.toLowerCase().includes("hourly") ||
+                            msg.userQuery.toLowerCase().includes("forecast") ||
+                            msg.userQuery.toLowerCase().includes("tomorrow")) && (
+                            <AIHourlyForecastCard data={msg.weatherData} />
+                          )}
+                          
+                          {(msg.userQuery.toLowerCase().includes("river") ||
+                            msg.userQuery.toLowerCase().includes("flood") ||
+                            msg.userQuery.toLowerCase().includes("ganga") ||
+                            msg.userQuery.toLowerCase().includes("alert") ||
+                            msg.userQuery.toLowerCase().includes("water")) && (
+                            <AIRiverTelemetryCard data={msg.weatherData} />
+                          )}
+                        </div>
+                      )}
                       
                       {/* Action Row */}
                       <div className="flex items-center gap-3.5 mt-2 text-gray-400 dark:text-neutral-500">
@@ -738,25 +1261,63 @@ export function AIAssistantInterface() {
                 </button>
               </div>
 
-              {/* Theme Settings Selector */}
-              <div className="flex flex-col gap-3">
-                <span className="text-xs uppercase tracking-wider font-semibold text-gray-400 dark:text-neutral-500">
-                  Appearance Theme
+              {/* Model Provider Selector */}
+              <div className="flex flex-col gap-3 mt-6 border-t border-neutral-200/50 dark:border-zinc-800/40 pt-5">
+                <span className="text-xs uppercase tracking-wider font-semibold text-gray-400 dark:text-neutral-500 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+                  AI Intelligence Model
                 </span>
-                <div className="grid grid-cols-3 gap-2 bg-neutral-100 dark:bg-zinc-900/60 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-zinc-800/40">
-                  {["light", "dark", "system"].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => handleThemeChange(t)}
-                      className={`py-2 px-3 rounded-xl text-sm font-semibold capitalize transition-all cursor-pointer ${
-                        theme === t
-                          ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm"
-                          : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 gap-2 bg-neutral-100 dark:bg-zinc-900/60 p-2 rounded-2xl border border-neutral-200/50 dark:border-zinc-800/40">
+                  <button
+                    onClick={() => handleModelProviderChange("google")}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      modelProvider === "google"
+                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
+                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    Gemini 3.5 Flash
+                  </button>
+                  <button
+                    onClick={() => handleModelProviderChange("gem3")}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      modelProvider === "gem3"
+                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
+                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    Gemini 3.1 Lite
+                  </button>
+                  <button
+                    onClick={() => handleModelProviderChange("gemma")}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      modelProvider === "gemma"
+                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
+                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    Gemma 4 (31B)
+                  </button>
+                  <button
+                    onClick={() => handleModelProviderChange("openai")}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      modelProvider === "openai"
+                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
+                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    GPT-4o Mini
+                  </button>
+                  <button
+                    onClick={() => handleModelProviderChange("auto")}
+                    className={`col-span-2 py-2.5 px-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                      modelProvider === "auto"
+                        ? "bg-white dark:bg-zinc-800 text-sky-600 dark:text-sky-400 shadow-sm border border-sky-500/20"
+                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200 bg-neutral-200/40 dark:bg-zinc-800/35"
+                    }`}
+                  >
+                    🚀 Auto-Switch (Robust)
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -804,16 +1365,33 @@ function AIThinkingToggle({ content }) {
 }
 
 function LiveThinkingToggle() {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [timer, setTimer] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const steps = [
+    "Establishing secure socket handshake with rainiX AI intelligence gateway...",
+    "Querying LangGraph agent structure for meteorological reasoning steps...",
+    "Triggering location_tool to search for localized river stations and urban centers...",
+    "Connecting to live weather API to fetch precipitation forecasts and hourly telemetry...",
+    "Triggering river_tool to gather water level fluctuations and station flood boundaries...",
+    "Synthesizing weather data with real-time river alert parameters...",
+    "Formulating unified safety warning and compiling dynamic chart matrices...",
+    "Formatting final reassuring response and preparing visualization modules..."
+  ];
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
       setTimer((prev) => prev + 1);
     }, 1000);
 
+    const stepInterval = setInterval(() => {
+      setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 2800);
+
     return () => {
       clearInterval(timerInterval);
+      clearInterval(stepInterval);
     };
   }, []);
 
@@ -844,7 +1422,7 @@ function LiveThinkingToggle() {
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden w-full mt-2"
           >
-            <AIThinkingBlock content="Querying LangGraph agent, connecting to live weather API metrics, and processing regional river alert structures..." isLive={true} />
+            <AIThinkingBlock content={steps[currentStep]} isLive={true} />
           </motion.div>
         )}
       </AnimatePresence>

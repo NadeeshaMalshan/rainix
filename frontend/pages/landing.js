@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Script from 'next/script';
 import { useRouter } from 'next/router';
-import { PromptInputBasic } from '@/components/ui/demo';
+import LiquidGlassText2D from '../components/LiquidGlassText2D';
 
 export default function Landing() {
   const router = useRouter();
-  const [particles, setParticles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [selectedCityData, setSelectedCityData] = useState(null);
+  const [isNight, setIsNight] = useState(true);
+  const [isFocused, setIsFocused] = useState(false);
   
-  // Recent Searches State (Loads from localStorage on client)
+  // Suggestions states
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // Recent Searches State
   const [recentSearches, setRecentSearches] = useState([]);
   
   // Saved Locations Live Weather State
@@ -26,24 +29,24 @@ export default function Landing() {
     { name: 'Kalu Ganga - Putupaula', level: '3.21m', status: 'Normal', trend: 'trending_flat' }
   ]);
 
-  // Generate background particles on mount
   useEffect(() => {
-    const items = [];
-    for (let i = 0; i < 20; i++) {
-      const size = Math.random() * 200 + 100;
-      items.push({
-        id: i,
-        width: `${size}px`,
-        height: `${size}px`,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        animationDelay: `${Math.random() * 5}s`,
-        duration: `${Math.random() * 20 + 20}s`
-      });
-    }
-    setParticles(items);
+    const checkTime = () => {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const currentTimeInMinutes = hours * 60 + minutes;
+      
+      const dayStart = 6 * 60; // 6:00 AM
+      const dayEnd = 18 * 60 + 30; // 6:30 PM
+      
+      const dayTime = currentTimeInMinutes >= dayStart && currentTimeInMinutes < dayEnd;
+      setIsNight(!dayTime);
+    };
 
-    // Load recent searches from localStorage
+    checkTime();
+    const interval = setInterval(checkTime, 60000);
+
+    // Load recent searches
     const saved = localStorage.getItem('rainix_recent_searches');
     if (saved) {
       try {
@@ -52,7 +55,6 @@ export default function Landing() {
         console.error(e);
       }
     } else {
-      // Default placeholder recent searches
       const defaults = [
         { name: 'Seattle, WA', query: 'Seattle', coords: '47.6062° N, 122.3321° W' },
         { name: 'Colombo, LK', query: 'Colombo', coords: '6.9271° N, 79.8612° E' }
@@ -61,10 +63,49 @@ export default function Landing() {
       localStorage.setItem('rainix_recent_searches', JSON.stringify(defaults));
     }
 
-    // Fetch actual weather for saved locations & rivers on load
     fetchSavedLocationsWeather();
     fetchLiveRivers();
+
+    return () => clearInterval(interval);
   }, []);
+
+  // Search-as-you-type geocoding suggestion API call + local river matching
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (searchQuery && searchQuery.trim().length >= 2) {
+        const trimmed = searchQuery.trim().toLowerCase();
+        
+        // Find matching river stations locally
+        const matchingRivers = riverStations.filter(river => 
+          river.name.toLowerCase().includes(trimmed)
+        ).map(river => ({
+          name: river.name,
+          country: 'Sri Lanka Hydrological Network',
+          admin1: 'River Station',
+          isRiver: true
+        }));
+
+        try {
+          const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=5`);
+          const data = await res.json();
+          let combinedResults = [...matchingRivers];
+          if (data.results) {
+            combinedResults = [...combinedResults, ...data.results];
+          }
+          setSuggestions(combinedResults);
+          setShowSuggestions(true);
+        } catch (err) {
+          console.error("Failed to fetch suggestions", err);
+          setSuggestions(matchingRivers);
+          setShowSuggestions(true);
+        }
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, riverStations]);
 
   const fetchSavedLocationsWeather = async () => {
     try {
@@ -115,18 +156,15 @@ export default function Landing() {
   const fetchLiveRivers = async () => {
     try {
       const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-      // Kelani Ganga (Nagalagam Street) is under region Kelani
       const kelaniRes = await fetch(`${nodeApiUrl}/api/rivers/Kelani`);
       const kelaniData = await kelaniRes.json();
       
-      // Kalu Ganga (Putupaula) is under region Kalu
       const kaluRes = await fetch(`${nodeApiUrl}/api/rivers/Kalu`);
       const kaluData = await kaluRes.json();
 
       const newRivers = [...riverStations];
 
       if (kelaniData.success && kelaniData.data.length > 0) {
-        // find Nagalagam Street device or Kelani device
         const device = kelaniData.data[0];
         newRivers[0] = {
           name: 'Kelani Ganga - ' + (device.area || 'Nagalagam Street'),
@@ -152,422 +190,360 @@ export default function Landing() {
     }
   };
 
-  // Perform search query
-  const handleSearch = (query) => {
+  const handleSearchSubmit = (query) => {
     if (!query || query.trim() === '') return;
     const trimmed = query.trim();
-    router.push(`/weather?city=${encodeURIComponent(trimmed)}`);
+    setShowSuggestions(false);
+    
+    const queryLower = trimmed.toLowerCase();
+    let targetCityQuery = trimmed;
+    if (queryLower.includes('kelani') || queryLower.includes('nagalagam')) {
+      targetCityQuery = 'Colombo';
+    } else if (queryLower.includes('kalu') || queryLower.includes('putupaula') || queryLower.includes('kalutara')) {
+      targetCityQuery = 'Kalutara';
+    }
+
+    router.push(`/weather?city=${encodeURIComponent(targetCityQuery)}`);
   };
 
+  const handleGpsClick = () => {
+    const pushCoords = (latitude, longitude) => {
+      router.push(`/weather?lat=${latitude}&lon=${longitude}`);
+    };
 
-  const handleClearAll = () => {
-    setRecentSearches([]);
-    localStorage.removeItem('rainix_recent_searches');
-  };
+    const fallbackToIpLocation = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data && data.latitude && data.longitude) {
+          pushCoords(data.latitude, data.longitude);
+        }
+      } catch (err) {
+        console.error("IP fallback failed:", err);
+      }
+    };
 
-  const handleClose = () => {
-    if (selectedCityData) {
-      setSelectedCityData(null);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          pushCoords(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.warn("GPS Error, falling back to IP:", error);
+          fallbackToIpLocation();
+        },
+        { timeout: 20000, maximumAge: 60000 }
+      );
     } else {
-      router.push('/');
+      fallbackToIpLocation();
     }
   };
 
-  // Maps WMO code to weather conditions
-  const getWeatherConditions = (code) => {
-    if (code === 0) return { label: 'Clear Sky', icon: 'sunny' };
-    if (code >= 1 && code <= 3) return { label: 'Mainly Clear / Partly Cloudy', icon: 'partly_cloudy_day' };
-    if (code === 45 || code === 48) return { label: 'Foggy Conditions', icon: 'foggy' };
-    if (code >= 51 && code <= 55) return { label: 'Light Drizzle', icon: 'rainy' };
-    if (code >= 61 && code <= 65) return { label: 'Continuous Rain', icon: 'rainy_heavy' };
-    if (code >= 71 && code <= 75) return { label: 'Snowfall', icon: 'weather_snowy' };
-    if (code >= 80 && code <= 82) return { label: 'Violent Showers', icon: 'rainy' };
-    if (code >= 95) return { label: 'Thunderstorms & Heavy Storms', icon: 'thunderstorm' };
-    return { label: 'Overcast Conditions', icon: 'cloud' };
-  };
+  const dayGradient = 'linear-gradient(180deg, #3A82F6 0%, #89CFF0 100%)';
+  const nightGradient = 'linear-gradient(180deg, #0A192F 0%, #112240 100%)';
 
   return (
-    <>
+    <div className="min-h-screen relative overflow-hidden font-sans text-white select-none">
       <Head>
-        <title>rainiX - All in ONE weather service</title>
-        <link href="/landing.css" rel="stylesheet" />
+        <title>rainiX - Minimal Weather Hub</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Hanken+Grotesk:wght@400;600&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
       </Head>
 
+      <Script src="https://cdn.tailwindcss.com?plugins=forms,container-queries" strategy="beforeInteractive" />
+      <Script id="tailwind-config" strategy="beforeInteractive">
+        {`
+          tailwind.config = {
+            theme: {
+              extend: {
+                fontFamily: {
+                  poppins: ['"Poppins"', 'sans-serif'],
+                  sans: ['"Poppins"', 'sans-serif'],
+                  display: ['"Poppins"', 'sans-serif'],
+                },
+                boxShadow: {
+                  'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.15)',
+                  'glass-sm': '0 4px 16px 0 rgba(0, 0, 0, 0.1)',
+                  'glass-lg': '0 12px 48px 0 rgba(0, 0, 0, 0.2)',
+                  'neon': '0 0 20px rgba(255, 255, 255, 0.2)',
+                }
+              }
+            }
+          }
+        `}
+      </Script>
+
+      <style>{`
+        @keyframes star-twinkle {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
+        @keyframes cloud-move {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(150vw); }
+        }
+        @keyframes fade-in-up {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pop-in {
+          0% { transform: scale(0.95); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes bird-flap {
+          0%, 100% { transform: scaleY(1); }
+          50% { transform: scaleY(-0.4); }
+        }
+        @keyframes fly-across-1 {
+          0% { transform: translate(-10vw, 15vh) scale(0.5); }
+          100% { transform: translate(110vw, 8vh) scale(0.5); }
+        }
+        @keyframes fly-across-2 {
+          0% { transform: translate(-15vw, 22vh) scale(0.4); }
+          100% { transform: translate(110vw, 12vh) scale(0.4); }
+        }
+        @keyframes fly-across-3 {
+          0% { transform: translate(-20vw, 18vh) scale(0.35); }
+          100% { transform: translate(110vw, 10vh) scale(0.35); }
+        }
+        
+        .animate-star { animation: star-twinkle ease-in-out infinite; will-change: opacity, transform; }
+        .animate-cloud { animation: cloud-move linear infinite; will-change: transform; }
+        .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .animate-pop-in { animation: pop-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
+
+      {/* Main Background */}
       <div 
-        className="text-on-surface font-body-md selection:bg-primary/30 min-h-screen relative overflow-y-auto"
-        style={{
-          background: 'radial-gradient(circle at top right, #1A3A5F, #0A192F)',
-        }}
+        className="font-poppins w-screen h-screen relative flex flex-col justify-between overflow-y-auto pb-12 transition-all duration-1000"
+        style={{ background: isNight ? nightGradient : dayGradient }}
       >
-        {/* Background Dashboard Simulation (Blurred behind overlay) */}
-        <div className="fixed inset-0 grid grid-cols-12 gap-6 p-8 opacity-25 grayscale pointer-events-none z-0">
-          <div className="col-span-8 glass-pane rounded-lg p-10 h-64"></div>
-          <div className="col-span-4 glass-pane rounded-lg p-10 h-64"></div>
-          <div className="col-span-4 glass-pane rounded-lg p-10 h-96"></div>
-          <div className="col-span-4 glass-pane rounded-lg p-10 h-96"></div>
-          <div className="col-span-4 glass-pane rounded-lg p-10 h-96"></div>
+        {/* Twinkling Stars (Night-only) */}
+        {isNight && (
+          <div className="star-container absolute inset-0 pointer-events-none z-0">
+            {Array.from({ length: 45 }).map((_, i) => (
+              <div 
+                key={i} 
+                className="star-particle animate-star absolute bg-white rounded-full" 
+                style={{ 
+                  width: `${Math.random() * 2 + 1}px`, 
+                  height: `${Math.random() * 2 + 1}px`, 
+                  left: `${Math.random() * 100}%`, 
+                  top: `${Math.random() * 65}%`, 
+                  animationDuration: `${0.8 + Math.random() * 1.8}s`, 
+                  animationDelay: `${Math.random() * -2}s` 
+                }} 
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Flying Birds (Day-only) */}
+        {!isNight && (
+          <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+            <div className="absolute" style={{ animation: 'fly-across-1 22s linear infinite', animationDelay: '0s' }}>
+              <svg className="w-8 h-6 text-slate-900/75 fill-current" viewBox="0 0 24 16">
+                <path d="M 2.1,3.5 C 5.1,1.5 9,0 12,2 C 15,0 18.9,1.5 21.9,3.5 C 22.8,4.1 21.5,5.1 20.3,5.1 C 17,5.1 13.5,7 12,12 C 10.5,7 7,5.1 3.7,5.1 C 2.5,5.1 1.2,4.1 2.1,3.5 Z" style={{ transformOrigin: 'center', animation: 'bird-flap 0.35s ease-in-out infinite' }} />
+              </svg>
+            </div>
+            <div className="absolute" style={{ animation: 'fly-across-2 25s linear infinite', animationDelay: '3s' }}>
+              <svg className="w-8 h-6 text-slate-950/70 fill-current" viewBox="0 0 24 16">
+                <path d="M 2.1,3.5 C 5.1,1.5 9,0 12,2 C 15,0 18.9,1.5 21.9,3.5 C 22.8,4.1 21.5,5.1 20.3,5.1 C 17,5.1 13.5,7 12,12 C 10.5,7 7,5.1 3.7,5.1 C 2.5,5.1 1.2,4.1 2.1,3.5 Z" style={{ transformOrigin: 'center', animation: 'bird-flap 0.4s ease-in-out infinite' }} />
+              </svg>
+            </div>
+            <div className="absolute" style={{ animation: 'fly-across-3 28s linear infinite', animationDelay: '1.5s' }}>
+              <svg className="w-8 h-6 text-slate-950/60 fill-current" viewBox="0 0 24 16">
+                <path d="M 2.1,3.5 C 5.1,1.5 9,0 12,2 C 15,0 18.9,1.5 21.9,3.5 C 22.8,4.1 21.5,5.1 20.3,5.1 C 17,5.1 13.5,7 12,12 C 10.5,7 7,5.1 3.7,5.1 C 2.5,5.1 1.2,4.1 2.1,3.5 Z" style={{ transformOrigin: 'center', animation: 'bird-flap 0.38s ease-in-out infinite' }} />
+              </svg>
+            </div>
+          </div>
+        )}
+
+     
+
+        {/* Soft Decorative Floating Clouds (exactly 4, dynamically sized for viewport scaling) */}
+        <div className="cloud-container absolute inset-0 pointer-events-none z-10 overflow-hidden">
+          {Array.from({ length: 4 }).map((_, i) => {
+            const sizes = [
+              'w-64 h-32 md:w-[32rem] md:h-[16rem]',
+              'w-80 h-40 md:w-[45rem] md:h-[20rem]',
+              'w-72 h-36 md:w-[36rem] md:h-[18rem]',
+              'w-64 h-32 md:w-[32rem] md:h-[16rem]'
+            ];
+            const sizeClass = sizes[i % sizes.length];
+            const tops = ['8%', '20%', '12%', '28%'];
+            const topVal = tops[i % tops.length];
+            return (
+              <img 
+                key={i} 
+                src="/images/cloud.png" 
+                alt="Cloud" 
+                className={`weather-cloud animate-cloud absolute object-contain mix-blend-multiply brightness-90 ${sizeClass} ${isNight ? 'opacity-20' : 'opacity-40'}`} 
+                style={{ 
+                  top: topVal, 
+                  left: `-800px`, 
+                  animationDuration: `${60 + i * 15}s`, 
+                  animationDelay: `${-i * 18}s` 
+                }} 
+              />
+            );
+          })}
         </div>
 
-        {/* Search Overlay Container */}
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] px-view-padding overflow-y-auto search-overlay-backdrop">
-          <div className="w-full max-w-3xl flex flex-col gap-8 animate-in fade-in zoom-in duration-300 relative z-10 pb-16">
+        {/* Center Main Content Container */}
+        <div className="flex-1 flex flex-col justify-center items-center w-full relative z-40 px-4 md:px-6 pt-[6vh] pb-32 animate-fade-in-up">
+          
+          <div className="flex flex-col items-center max-w-2xl w-full text-center">
             
-            {/* Close Button (Absolute for quick exit) */}
-            <button 
-              className="fixed top-8 right-8 text-on-surface-variant hover:text-primary transition-colors cursor-pointer p-2 hover:bg-white/5 rounded-full"
-              onClick={handleClose}
-              aria-label="Close"
-            >
-              <span className="material-symbols-outlined text-[32px] block">close</span>
-            </button>
-
-            {/* Search Header */}
-            <div className="space-y-2 text-center lg:text-left">
-              <h1 className="font-headline-lg text-[44px] text-primary tracking-tight font-extrabold flex items-center justify-center lg:justify-start gap-2">
-                <span className="material-symbols-outlined text-[44px]">rainy</span> rainiX
-              </h1>
-              <p className="font-body-md text-on-surface-variant/80 tracking-wide font-medium">All in ONE weather & river alert service</p>
+      
+           
+            {/* Liquid Glass text */}
+            <div className="scale-75 md:scale-100 origin-center transition-transform">
+              <LiquidGlassText2D text="rainiX" />
             </div>
 
-            {/* Focused Interaction Zone */}
-            <div className="glass-pane rounded-lg p-2 active-search-focus shadow-2xl transition-all duration-500 bg-white/[0.02]">
-              <div className="px-2 py-2">
-                <PromptInputBasic onSearch={handleSearch} />
-              </div>
-
-              {/* Filter Toggle Chips */}
-              <div className="flex gap-3 px-6 pb-6 pt-2 border-t border-white/[0.05]">
-                <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary font-label-sm text-label-sm transition-transform active:scale-95">
-                  <span className="material-symbols-outlined text-[18px]">location_on</span>
-                  Sri Lanka & Global Locations
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setSearchQuery('Colombo')} 
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 text-on-surface-variant font-label-sm text-label-sm hover:bg-white/10 transition-colors"
+            {/* Simple Minimalist Pill Search Bar */}
+            <div className="w-full max-w-lg mt-6 md:mt-8 flex items-center gap-3">
+              <div className="flex-1 relative">
+                <div 
+                  className="w-full h-11 md:h-[3.25rem] rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg transition-all duration-300 flex items-center pr-2 pl-4 md:pl-5 hover:bg-white/25 focus-within:bg-white/25 focus-within:border-white/40"
                 >
-                  <span className="material-symbols-outlined text-[18px]">water_drop</span>
-                  River Net
-                </button>
-              </div>
-            </div>
-
-            {/* Error Message Panel */}
-            {errorMsg && (
-              <div className="glass-pane rounded-xl p-6 border-red-500/40 bg-red-500/10 text-red-200 shadow-lg animate-in slide-in-from-top duration-300">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-red-400 text-3xl">warning</span>
-                  <p className="font-semibold text-lg">{errorMsg}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Loading Indicator */}
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center p-12 glass-pane rounded-xl gap-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-                <p className="text-on-surface-variant font-medium text-lg animate-pulse">Fetching Real-Time Meteorological & Hydrological Data...</p>
-              </div>
-            )}
-
-            {/* Dynamic Search Results Screen */}
-            {selectedCityData && !isLoading && (
-              <div className="glass-pane rounded-xl p-8 flex flex-col gap-6 shadow-2xl bg-white/[0.03] border-primary/20 animate-in fade-in duration-300">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
-                  <div>
-                    <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-widest">
-                      <span className="material-symbols-outlined text-[16px]">map</span>
-                      Global Coordinates Weather
-                    </div>
-                    <h2 className="text-[36px] font-extrabold text-on-surface leading-tight mt-1">
-                      {selectedCityData.weather.city}, <span className="text-primary">{selectedCityData.weather.country}</span>
-                    </h2>
-                    <p className="text-on-surface-variant text-sm font-semibold tracking-wider uppercase mt-1">
-                      {selectedCityData.weather.coordinates.latitude.toFixed(4)}° N, {selectedCityData.weather.coordinates.longitude.toFixed(4)}° E
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/10 shadow-inner">
-                    <span className="material-symbols-outlined text-[48px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                      {getWeatherConditions(selectedCityData.weather.weather.weatherCode).icon}
-                    </span>
-                    <div className="text-right">
-                      <span className="text-[42px] font-black text-primary leading-none block">
-                        {Math.round(selectedCityData.weather.weather.temperature)}°C
-                      </span>
-                      <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mt-1 block">
-                        {getWeatherConditions(selectedCityData.weather.weather.weatherCode).label}
-                      </span>
-                    </div>
-                  </div>
+                  <input 
+                    className="flex-1 min-w-0 bg-transparent border-none text-left focus:ring-0 text-white font-medium text-base md:text-lg placeholder:text-white placeholder:opacity-60 outline-none"
+                    placeholder="Search City or River..." 
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setTimeout(() => setIsFocused(false), 250)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(searchQuery); }}
+                  />
+                  <button 
+                    onClick={() => handleSearchSubmit(searchQuery)}
+                    className="p-1 md:p-1.5 rounded-full hover:bg-white/30 transition-colors text-white flex items-center justify-center cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-xl md:text-2xl">search</span>
+                  </button>
                 </div>
 
-                {/* Weather Metrics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/5 flex flex-col gap-1">
-                    <span className="material-symbols-outlined text-primary text-[24px]">air</span>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Wind Speed</span>
-                    <span className="text-xl font-bold text-on-surface">{selectedCityData.weather.weather.windSpeed} km/h</span>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/5 flex flex-col gap-1">
-                    <span className="material-symbols-outlined text-primary text-[24px]">humidity_mid</span>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Humidity</span>
-                    <span className="text-xl font-bold text-on-surface">{selectedCityData.weather.weather.humidity}%</span>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/5 flex flex-col gap-1">
-                    <span className="material-symbols-outlined text-primary text-[24px]">rainy</span>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Precipitation</span>
-                    <span className="text-xl font-bold text-on-surface">{selectedCityData.weather.weather.precipitation} mm</span>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/5 flex flex-col gap-1">
-                    <span className="material-symbols-outlined text-primary text-[24px]">schedule</span>
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest">Update Time</span>
-                    <span className="text-[13px] font-bold text-on-surface break-words leading-tight">{new Date(selectedCityData.weather.weather.time).toLocaleTimeString()}</span>
-                  </div>
-                </div>
-
-                {/* Hydrological Alert River Stations in City */}
-                <div className="space-y-3 mt-2">
-                  <h3 className="font-title-md text-title-md text-primary flex items-center gap-2 border-b border-white/5 pb-2 font-bold">
-                    <span className="material-symbols-outlined">waves</span> 
-                    Active Hydro River Stations ({selectedCityData.rivers ? selectedCityData.rivers.length : 0})
-                  </h3>
-                  {selectedCityData.rivers && selectedCityData.rivers.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedCityData.rivers.map((river, idx) => (
-                        <div key={idx} className="group glass-pane rounded-xl p-5 flex items-center justify-between hover:bg-white/10 cursor-pointer transition-all border border-white/10">
-                          <div className="flex items-center gap-4">
-                            <div className="bg-primary/20 p-3 rounded-lg border border-primary/20">
-                              <span className="material-symbols-outlined text-primary text-2xl font-bold">waves</span>
+                {/* Dynamic Dropdown Overlay (Search Suggestions vs. Grouped Recents & Saved) */}
+                {isFocused && (
+                  <div 
+                    className="absolute top-[3.2rem] md:top-[3.75rem] left-0 w-full rounded-2xl bg-black/45 backdrop-blur-xl border border-white/20 shadow-2xl transition-all duration-300 z-50 flex flex-col overflow-hidden max-h-[250px] md:max-h-[300px] overflow-y-auto"
+                  >
+                    {searchQuery.trim().length < 2 ? (
+                      /* Case 1: Search input is empty or cleared - immediately show Recents/Saved */
+                      <>
+                        {recentSearches.length > 0 && (
+                          <div className="p-2 md:p-3 border-b border-white/10">
+                            <div className="text-[9px] md:text-[10px] uppercase font-bold text-sky-400 px-3 py-1 flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-xs">history</span> Recent Searches
                             </div>
-                            <div>
-                              <p className="font-bold text-[18px] text-on-surface group-hover:text-primary transition-colors">{river.name}</p>
-                              <p className="font-semibold text-sm text-on-surface-variant/80 uppercase tracking-widest mt-1">Area: {river.city || 'N/A'}</p>
-                              <span className={`inline-block text-xs font-bold px-2 py-1 rounded mt-2 uppercase ${river.status === 'ALERT' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-green-500/20 text-green-300 border border-green-500/30'}`}>
-                                {river.status === 'ALERT' ? 'High alert flood' : 'Safe level'}
+                            {recentSearches.slice(0, 3).map((item, idx) => (
+                              <div 
+                                key={idx} 
+                                className="px-3 py-1.5 md:py-2 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex flex-col mt-0.5 md:mt-1"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => { setSearchQuery(item.query); handleSearchSubmit(item.query); setIsFocused(false); }}
+                              >
+                                <span className="font-semibold text-xs md:text-sm">{item.name}</span>
+                                <span className="text-[9px] md:text-[10px] opacity-60">{item.coords}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {Object.keys(savedLocationsWeather).length > 0 && (
+                          <div className="p-2 md:p-3">
+                            <div className="text-[9px] md:text-[10px] uppercase font-bold text-sky-400 px-3 py-1 flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-xs">bookmark</span> Saved Locations
+                            </div>
+                            {Object.entries(savedLocationsWeather).map(([name, loc], idx) => (
+                              <div 
+                                key={idx} 
+                                className="px-3 py-1.5 md:py-2 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex items-center justify-between mt-0.5 md:mt-1"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => { const q = name.split(',')[0]; setSearchQuery(q); handleSearchSubmit(q); setIsFocused(false); }}
+                              >
+                                <div>
+                                  <span className="font-semibold text-xs md:text-sm block">{name}</span>
+                                  <span className="text-[9px] md:text-[10px] text-green-400">{loc.status}</span>
+                                </div>
+                                <span className="text-xs md:text-sm font-bold text-sky-400">{loc.temp}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {recentSearches.length === 0 && Object.keys(savedLocationsWeather).length === 0 && (
+                          <div className="p-4 text-center text-white/50 text-[11px] md:text-xs font-semibold">
+                            No recent or saved locations available.
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      /* Case 2: Typed query is 2+ characters */
+                      showSuggestions && suggestions.length > 0 ? (
+                        /* Subcase A: Suggestions available */
+                        <div className="p-2 md:p-3">
+                          <div className="text-[9px] md:text-[10px] uppercase font-bold text-sky-400 px-3 py-1 flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-xs">travel_explore</span> Search Results
+                          </div>
+                          {suggestions.map((s, idx) => (
+                            <div 
+                              key={idx} 
+                              className="px-3 py-2 md:py-2.5 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex flex-col border-b border-white/5 last:border-b-0"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => { setSearchQuery(s.name); handleSearchSubmit(s.name); setIsFocused(false); }}
+                            >
+                              <span className="font-semibold text-xs md:text-sm flex items-center gap-1">
+                                {s.isRiver && <span className="material-symbols-outlined text-sky-400 text-sm">waves</span>}
+                                {s.name}
                               </span>
+                              <span className="text-[9px] md:text-[10px] opacity-75">{s.admin1 ? `${s.admin1}, ` : ''}{s.country}</span>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-xl font-extrabold text-primary block">{river.maxLevel ? river.maxLevel.toFixed(2) : '0.00'}m</span>
-                            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mt-1">Water level</span>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-white/5 rounded-xl text-center text-on-surface-variant font-semibold">
-                      No active hydrological river network sensors are mapped in {selectedCityData.weather.city}.
-                    </div>
-                  )}
-                </div>
-
-                {/* RainViewer Live Atmospheric Weather Radar */}
-                {selectedCityData.radar && (
-                  <div className="space-y-3 mt-2">
-                    <h3 className="font-title-md text-title-md text-primary flex items-center gap-2 border-b border-white/5 pb-2 font-bold">
-                      <span className="material-symbols-outlined">satellite_alt</span>
-                      Live Weather Radar Overlay
-                    </h3>
-                    <div className="rounded-xl overflow-hidden glass-pane border border-white/10 relative p-4 flex flex-col md:flex-row items-center gap-6">
-                      <div className="relative w-full md:w-48 h-48 bg-slate-950/80 rounded-xl overflow-hidden border border-white/10 shadow-inner flex items-center justify-center">
-                        <div className="absolute inset-0 bg-[radial-gradient(#1e3c72_1px,transparent_1px)] [background-size:16px_16px] opacity-40 animate-pulse"></div>
-                        {/* Custom visual mockup of radar map sweep */}
-                        <div className="absolute top-1/2 left-1/2 w-44 h-44 -mt-22 -ml-22 rounded-full border border-primary/20 animate-ping"></div>
-                        <div className="absolute top-1/2 left-1/2 w-28 h-28 -mt-14 -ml-14 rounded-full border border-primary/40"></div>
-                        <div className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-primary/55 to-transparent top-1/2 left-0 origin-center animate-spin"></div>
-                        <span className="material-symbols-outlined text-primary text-[56px] relative z-10 opacity-80" style={{ fontVariationSettings: "'FILL' 1" }}>radar</span>
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <h4 className="text-xl font-bold text-on-surface flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse"></span>
-                          Radar Network Online
-                        </h4>
-                        <p className="text-on-surface-variant text-sm leading-relaxed">
-                          Satellite and Precipitation tracking is active for <strong>{selectedCityData.weather.city}</strong>. Rainviewer host metadata generated a radar sweep frame for timeline <strong>{new Date(selectedCityData.radar.latestFrame * 1000).toLocaleTimeString()}</strong>.
-                        </p>
-                        <div className="bg-slate-900/60 p-3 rounded-lg border border-white/5">
-                          <p className="text-[12px] font-semibold text-primary font-mono select-all truncate">
-                            {selectedCityData.radar.tileUrl}
-                          </p>
+                      ) : (
+                        /* Subcase B: No results available - Display Search results are not available */
+                        <div className="p-4 md:p-5 text-center text-white/60 text-xs md:text-sm font-medium">
+                          <span className="material-symbols-outlined text-white/40 text-lg md:text-xl block mb-1">info</span>
+                          Search results are not available
                         </div>
-                      </div>
-                    </div>
+                      )
+                    )}
                   </div>
                 )}
-
-                <div className="flex justify-end gap-3 mt-4 border-t border-white/10 pt-6">
-                  <button 
-                    onClick={() => setSelectedCityData(null)}
-                    className="px-6 py-2 bg-white/5 hover:bg-white/10 text-on-surface font-semibold rounded-lg transition-colors border border-white/10"
-                  >
-                    Clear Result
-                  </button>
-                  <button 
-                    onClick={handleClose}
-                    className="px-6 py-2 bg-primary hover:bg-primary-container text-on-primary font-bold rounded-lg transition-all active:scale-95 shadow-lg"
-                  >
-                    Return to Dashboard
-                  </button>
-                </div>
               </div>
-            )}
 
-            {/* Results & Suggestions Grid */}
-            {!selectedCityData && !isLoading && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-card-gap pb-bottom-safe-area">
-                
-                {/* Recent Searches */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="font-title-md text-title-md text-primary-fixed-dim flex items-center gap-2 font-bold">
-                      <span className="material-symbols-outlined text-primary">history</span>
-                      Recent Searches
-                    </h3>
-                    {recentSearches.length > 0 && (
-                      <button 
-                        onClick={handleClearAll}
-                        className="text-label-sm font-label-sm text-on-surface-variant hover:text-error transition-colors uppercase font-bold tracking-wider"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {recentSearches.length > 0 ? (
-                      recentSearches.map((item, idx) => (
-                        <div 
-                          key={idx}
-                          onClick={() => { setSearchQuery(item.query); handleSearch(item.query); }}
-                          className="group glass-pane rounded-xl p-4 flex items-center justify-between hover:bg-white/10 cursor-pointer transition-all border border-white/5 hover:border-primary/30"
-                        >
-                          <div className="flex items-center gap-4">
-                            <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">location_city</span>
-                            <div>
-                              <p className="font-title-md text-on-surface font-bold group-hover:text-primary transition-colors">{item.name}</p>
-                              <p className="font-label-sm text-label-sm text-on-surface-variant font-medium mt-0.5">{item.coords}</p>
-                            </div>
-                          </div>
-                          <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">north_west</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-on-surface-variant px-4 py-8 text-center bg-white/[0.02] rounded-xl font-medium">Your search history is empty.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Saved Locations */}
-                <div className="space-y-4">
-                  <h3 className="font-title-md text-title-md text-primary-fixed-dim px-2 flex items-center gap-2 font-bold">
-                    <span className="material-symbols-outlined text-primary">bookmark</span>
-                    Saved Locations
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    {Object.entries(savedLocationsWeather).map(([name, loc], idx) => (
-                      <div 
-                        key={idx}
-                        onClick={() => { setSearchQuery(name.split(',')[0]); handleSearch(name.split(',')[0]); }}
-                        className="group glass-pane rounded-xl p-4 flex items-center justify-between hover:border-primary/40 hover:bg-white/5 cursor-pointer transition-all overflow-hidden relative border border-white/5"
-                      >
-                        <div className="flex items-center gap-4 relative z-10">
-                          <div className="bg-primary/20 p-2.5 rounded-lg border border-primary/20">
-                            <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                              {loc.style}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-title-md text-on-surface font-bold group-hover:text-primary transition-colors">{name}</p>
-                            <p className={`font-label-sm text-label-sm font-bold uppercase mt-0.5 ${loc.style === 'thunderstorm' ? 'text-tertiary-container' : 'text-green-300'}`}>
-                              {loc.status}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right relative z-10 flex items-center gap-2">
-                          <p className="font-headline-lg-mobile text-headline-lg-mobile text-primary font-black">{loc.temp}</p>
-                          <span className="material-symbols-outlined text-on-surface-variant/40 group-hover:text-primary transition-colors">chevron_right</span>
-                        </div>
-                        {/* Dynamic decorative backdrop effect */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Active River Stations */}
-                <div className="col-span-1 md:col-span-2 space-y-4 mt-4">
-                  <h3 className="font-title-md text-title-md text-primary-fixed-dim px-2 flex items-center gap-2 font-bold">
-                    <span className="material-symbols-outlined text-primary">water_lux</span>
-                    Hydro Sri Lanka Live Stations
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {riverStations.map((station, idx) => (
-                      <div 
-                        key={idx}
-                        onClick={() => { setSearchQuery(station.name.includes('Kelani') ? 'Colombo' : 'Kalutara'); handleSearch(station.name.includes('Kelani') ? 'Colombo' : 'Kalutara'); }}
-                        className="group glass-pane rounded-xl p-4 flex items-center justify-between hover:bg-white/10 cursor-pointer transition-all border border-white/5 hover:border-primary/30"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="bg-primary/10 p-2.5 rounded-lg border border-primary/10">
-                            <span className="material-symbols-outlined text-primary text-xl">waves</span>
-                          </div>
-                          <div>
-                            <p className="font-bold text-on-surface group-hover:text-primary transition-colors">{station.name}</p>
-                            <p className={`font-label-sm text-label-sm font-bold uppercase mt-1 ${station.status === 'Normal' ? 'text-green-300' : 'text-tertiary-container animate-pulse'}`}>
-                              {station.level} - {station.status}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className={`material-symbols-outlined text-[24px] ${station.status === 'Normal' ? 'text-on-surface-variant/60' : 'text-tertiary-container'}`}>
-                            {station.trend}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-            )}
-
-            {/* Footer Stats */}
-            <div className="border-t border-white/10 pt-6 flex flex-wrap justify-between items-center gap-4 text-on-surface-variant font-semibold text-xs tracking-wider">
-              <div className="flex gap-8">
-                <div className="flex flex-col">
-                  <span className="uppercase opacity-50 font-bold">Rainix Platform online</span>
-                  <span className="text-primary font-extrabold mt-0.5">HYDRO-MET LOGICAL SHIELD ACTIVE</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="uppercase opacity-50 font-bold">POWERED BY:</span>
-                  <span className="text-on-surface font-extrabold mt-0.5">OPENWEATHER, RIVERNET, RAINVIEWER</span>
-                </div>
-              </div>
-              <div className="text-on-surface-variant/40 font-mono text-[10px]">
-                BUILD v1.8.2 // LATENCY: 34MS
-              </div>
+              {/* GPS weather action button */}
+              <button 
+                type="button" 
+                className="h-11 w-11 md:h-[3.25rem] md:w-[3.25rem] rounded-full flex-shrink-0 bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 transition-all duration-300 flex items-center justify-center text-white shadow-lg cursor-pointer" 
+                onClick={handleGpsClick}
+              >
+                <span className="material-symbols-outlined text-xl md:text-2xl">my_location</span>
+              </button>
             </div>
 
+            {/* rainiX AI Quick Gateway Button */}
+            <button
+  onClick={() => router.push('/ai')}
+  className="mt-6 px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 hover:border-white/30 shadow-lg text-white text-sm md:text-base flex items-center gap-2 transition-all hover:scale-[1.03] active:scale-[0.98] cursor-pointer group"
+>
+  <span className="text-black dark:text-white leading-none flex items-center">
+    ↗
+  </span>
+
+  <span className="font-medium">rainiX AI</span>
+</button>
           </div>
         </div>
 
-        {/* Background Atmospheric Effect */}
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-          {particles.map((particle) => (
-            <div
-              key={particle.id}
-              className="absolute bg-primary/5 rounded-full blur-3xl floating-particle"
-              style={{
-                width: particle.width,
-                height: particle.height,
-                left: particle.left,
-                top: particle.top,
-                animationDelay: particle.animationDelay,
-                '--duration': particle.duration
-              }}
-            />
-          ))}
-        </div>
+        {/* Bottom Landscape Ground (Responsive scaling for small landscape overlays) */}
+       
       </div>
-    </>
+    </div>
   );
 }

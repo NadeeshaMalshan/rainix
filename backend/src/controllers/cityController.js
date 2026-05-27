@@ -1,3 +1,4 @@
+const axios = require("axios");
 const {fetchWeatherByCity, fetchWeatherData} = require("../services/weatherService");
 const {
   getRiversByLocation,
@@ -12,10 +13,35 @@ exports.getCityOverview = async (req, res) => {
         console.log("Fetching weather...");
 
         let weather;
+        let resolvedCityName = city;
         if (lat && lon) {
             weather = await fetchWeatherData(lat, lon);
-            weather.city = city;
-            weather.country = 'Your Location';
+            
+            try {
+                const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=en`, {
+                    headers: {
+                        'User-Agent': 'rainiX-Weather-App'
+                    },
+                    timeout: 4000
+                });
+                
+                const address = geoRes.data?.address;
+                if (address) {
+                    const actualCity = address.city || address.town || address.suburb || address.village || address.municipality || address.county || address.state || 'My Location';
+                    const actualCountry = address.country || 'Your Location';
+                    
+                    resolvedCityName = actualCity;
+                    weather.city = actualCity;
+                    weather.country = actualCountry;
+                } else {
+                    weather.city = city;
+                    weather.country = 'Your Location';
+                }
+            } catch (geoErr) {
+                console.error("Reverse geocoding failed:", geoErr.message);
+                weather.city = city;
+                weather.country = 'Your Location';
+            }
         } else {
             weather = await fetchWeatherByCity(city);
         }
@@ -23,7 +49,7 @@ exports.getCityOverview = async (req, res) => {
         console.log("Weather OK");
 
         console.log("Fetching rivers...");
-        const rivers = await getRiversByLocation(city);
+        const rivers = await getRiversByLocation(resolvedCityName);
         console.log("Rivers OK");
 
         // Enrich rivers with actual 24-hour historical chart data
@@ -79,7 +105,7 @@ exports.getCityOverview = async (req, res) => {
         res.json({
             success: true,
             data: {
-                city,
+                city: resolvedCityName,
                 weather,
                 rivers,
                 radar
