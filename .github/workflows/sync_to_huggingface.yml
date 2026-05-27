@@ -1,0 +1,34 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Configure git
+          git config --global user.email "git-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          
+          # Force push the AI folder or the entire repository to the HF Space
+          # Note: If your Hugging Face Space is a Python FastAPI space, it needs the Dockerfile/requirements in the root of the Space.
+          # Since Hugging Face expects the Dockerfile in the root of the repository, we can push the contents of the AI subdirectory.
+          
+          # To do this cleanly, we checkout the repository, filter/subtree push the AI folder:
+          git subtree split --prefix=AI -b hf-space-branch
+          
+          # Push the isolated hf-space-branch directly to the HF Space master branch
+          git push --force https://NadeeshaMalshan:$HF_TOKEN@huggingface.co/spaces/NadeeshaMalshan/rainix-ai hf-space-branch:master
