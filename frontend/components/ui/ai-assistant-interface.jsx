@@ -304,33 +304,17 @@ function AIRiverTelemetryCard({ data }) {
           maxVal = maxVal + (diff > 0 ? diff * 0.15 : 1);
           minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
           
-          // Check if we have a prediction to extend the graph
+          // Check if we have a prediction for the text stats
           minX = 0;
           maxX = xValues.length - 1 || 1;
           
           const rid = river.id || river.name;
           predictedLevel = predictions[rid];
-          let extendedMaxX = maxX;
-          let futurePoints = 0;
           
-          if (predictedLevel !== undefined) {
-            // Include predicted value in Y axis scaling
-            if (predictedLevel > maxVal) maxVal = predictedLevel;
-            if (predictedLevel < minVal) minVal = predictedLevel;
-            
-            // Re-adjust diff to include padding around the predicted value
-            const diff = maxVal - minVal;
-            maxVal = maxVal + (diff > 0 ? diff * 0.15 : 1);
-            minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
-            
-            // Assume historicalData is 24h. 3h is 3/24 = 1/8 of the data points length.
-            futurePoints = Math.max(1, Math.floor(xValues.length / 8));
-            extendedMaxX = maxX + futurePoints;
-          }
           
           // X shifts: 40 to 350 to leave room for Y labels
           coords = river.historicalData.map((p, i) => {
-            const xSVG = ((i - minX) / (extendedMaxX - minX)) * 310 + 40;
+            const xSVG = ((i - minX) / (maxX - minX)) * 310 + 40;
             const ySVG = 110 - ((p.y - minVal) / (maxVal - minVal)) * 90;
             return { x: xSVG, y: ySVG, val: p.y };
           });
@@ -403,8 +387,8 @@ function AIRiverTelemetryCard({ data }) {
             
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-neutral-200/50 dark:border-zinc-800/70 pt-3 text-xs md:text-sm font-medium">
               <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
-                <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">warning</span>
-                <span>Alert Limit: {alertLimitVal !== null ? `${alertLimitVal.toFixed(2)}m` : 'Unknown'}</span>
+                <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">online_prediction</span>
+                <span className="text-gray-900 dark:text-neutral-100 font-semibold">3H Predict: {predictedLevel !== undefined ? `${predictedLevel.toFixed(2)}m` : '...'}</span>
               </div>
               <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
                 <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">trending_up</span>
@@ -470,44 +454,19 @@ function AIRiverTelemetryCard({ data }) {
                     className="drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                   />
                   
-                  {predictedLevel !== undefined && (
-                    <polyline
-                      fill="none"
-                      stroke={strokeColor}
-                      strokeWidth="2.5"
-                      strokeDasharray="4 4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      points={`${coords[coords.length - 1].x},${coords[coords.length - 1].y} 350,${110 - ((predictedLevel - minVal) / (maxVal - minVal)) * 90}`}
-                      className="drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)] opacity-80"
-                    />
-                  )}
-                  
                   {river.historicalData.length > 1 && (
                     <>
                       <circle cx="40" cy={110 - ((river.historicalData[0].y - minVal) / (maxVal - minVal)) * 90} r="3.5" fill={strokeColor} />
                       <circle cx={coords[coords.length - 1].x} cy={coords[coords.length - 1].y} r="4.5" fill={strokeColor} stroke="white" strokeWidth="1.5" />
-                      
-                      {predictedLevel !== undefined && (
-                        <circle cx="350" cy={110 - ((predictedLevel - minVal) / (maxVal - minVal)) * 90} r="3.5" fill="none" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="2 1" />
-                      )}
                     </>
                   )}
                 </svg>
                 
                 {/* X-axis Time Labels */}
-                <div className="flex justify-between text-[9px] opacity-60 mt-2 font-mono text-gray-500 dark:text-neutral-400" style={{ paddingLeft: "40px", paddingRight: predictedLevel !== undefined ? "0px" : "10px" }}>
-                  {timeLabels.map((time, i) => {
-                     // Spread out evenly across the available width
-                     if (i === timeLabels.length - 1 && predictedLevel !== undefined) {
-                         // We have a prediction, so we leave room at the end for the +3H label
-                         return <span key={i}>{time}</span>;
-                     }
-                     return <span key={i}>{time}</span>;
-                  })}
-                  {predictedLevel !== undefined && (
-                    <span className="text-blue-500 dark:text-blue-400 font-bold">+3H</span>
-                  )}
+                <div className="flex justify-between text-[9px] opacity-60 mt-2 font-mono text-gray-500 dark:text-neutral-400 pl-[35px]">
+                  {timeLabels.map((time, i) => (
+                    <span key={i}>{time}</span>
+                  ))}
                 </div>
               </div>
             ) : (
