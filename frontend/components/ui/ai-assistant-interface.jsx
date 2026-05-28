@@ -612,8 +612,10 @@ export function AIAssistantInterface() {
           finalText = final ?? finalText;
 
           // Fetch weather cards after we know the final assistant text
-          // Prioritize the exact location detected from the AI's internal tool calls!
-          const detected = detectedBackendLocation || detectCity(userText, finalText || "");
+          // If the backend gave us a location, it might be a river name. Let's map it.
+          const mappedBackendLoc = detectedBackendLocation ? detectCity(detectedBackendLocation, "") : null;
+          const detected = mappedBackendLoc || detectedBackendLocation || detectCity(userText, finalText || "");
+          
           let fetchedData = null;
           if (detected) {
             try {
@@ -639,6 +641,8 @@ export function AIAssistantInterface() {
             isStreaming: false,
             status: ""
           });
+          
+          setIsLoading(false);
         };
 
         es.addEventListener("meta", (e) => {
@@ -707,6 +711,7 @@ export function AIAssistantInterface() {
             text: "Unable to connect to rainiX AI backend stream.",
             isStreaming: false
           });
+          setIsLoading(false);
           throw new Error("Failed to connect to FastAPI backend stream");
         });
       } catch (error) {
@@ -739,7 +744,6 @@ export function AIAssistantInterface() {
           weatherData: fetchedData
         };
         setMessages((prev) => [...prev, fallbackMsg]);
-      } finally {
         setIsLoading(false);
       }
     }
