@@ -54,10 +54,39 @@ const detectCity = (userText, assistantText) => {
       return city.charAt(0).toUpperCase() + city.slice(1);
     }
   }
-  if (combined.includes("kalu ganga") || combined.includes("kalu")) return "Ratnapura";
-  if (combined.includes("kelani ganga") || combined.includes("kelani")) return "Colombo";
-  if (combined.includes("nilwala ganga") || combined.includes("nilwala")) return "Matara";
-  if (combined.includes("mahaweli")) return "Kandy";
+
+  // ─── River name → City mappings (detected from AI's English response) ───
+  // AI always mentions the river name in English, so this catches everything
+  // regardless of what language the user typed in.
+  const riverCityMap = [
+    { rivers: ["kalu ganga", "kalu gange", "kalu"], city: "Ratnapura" },
+    { rivers: ["kelani ganga", "kelani gange", "kelani"], city: "Colombo" },
+    { rivers: ["nilwala ganga", "nilwala gange", "nilwala"], city: "Matara" },
+    { rivers: ["mahaweli"], city: "Kandy" },
+    { rivers: ["kuru ganga", "kuru gange", "kuru"], city: "Kuruvita" },
+    { rivers: ["deduru oya", "deduru"], city: "Kurunegala" },
+    { rivers: ["mi oya"], city: "Puttalam" },
+    { rivers: ["malwathu oya", "malwathu"], city: "Anuradhapura" },
+    { rivers: ["yan oya"], city: "Trincomalee" },
+    { rivers: ["gal oya"], city: "Ampara" },
+    { rivers: ["gin ganga", "gin gange"], city: "Galle" },
+    { rivers: ["wey ganga", "wey gange"], city: "Kahawaththa" },
+    { rivers: ["kukule ganga", "kukule gange"], city: "Kalawana" },
+    { rivers: ["denawaka ganga", "denawaka gange"], city: "Pelmadulla" },
+    { rivers: ["niriella ganga", "niriella gange"], city: "Elapatha" },
+    { rivers: ["galathura oya"], city: "Ayagama" },
+    { rivers: ["mundeni aru"], city: "Batticaloa" },
+    { rivers: ["uruwal oya"], city: "Gampaha" },
+    { rivers: ["kalu ela"], city: "Gampaha" },
+    { rivers: ["hali ela"], city: "Badulla" },
+  ];
+
+  for (const entry of riverCityMap) {
+    if (entry.rivers.some(r => combined.includes(r))) {
+      return entry.city;
+    }
+  }
+
   return null;
 };
 
@@ -1145,32 +1174,14 @@ export function AIAssistantInterface() {
                       </div>
                       {msg.weatherData && (
                         <div className="w-full mt-2 flex flex-row flex-wrap items-start gap-4">
-                          {(!msg.userQuery.toLowerCase().includes("24 hour") &&
-                            !msg.userQuery.toLowerCase().includes("24 hrs") &&
-                            !msg.userQuery.toLowerCase().includes("24h") &&
-                            !msg.userQuery.toLowerCase().includes("hourly") &&
-                            !msg.userQuery.toLowerCase().includes("forecast") &&
-                            !msg.userQuery.toLowerCase().includes("river") &&
-                            !msg.userQuery.toLowerCase().includes("flood") &&
-                            !msg.userQuery.toLowerCase().includes("ganga") &&
-                            !msg.userQuery.toLowerCase().includes("water")) && (
+                          {/* Data-driven: show cards based on what data the API returned */}
+                          {msg.weatherData.weather && !(msg.weatherData.rivers?.length > 0) && (
                             <AICurrentWeatherCard data={msg.weatherData} />
                           )}
-                          
-                          {(msg.userQuery.toLowerCase().includes("24 hour") ||
-                            msg.userQuery.toLowerCase().includes("24 hrs") ||
-                            msg.userQuery.toLowerCase().includes("24h") ||
-                            msg.userQuery.toLowerCase().includes("hourly") ||
-                            msg.userQuery.toLowerCase().includes("forecast") ||
-                            msg.userQuery.toLowerCase().includes("tomorrow")) && (
+                          {msg.weatherData.weather?.weather?.hourly?.length > 0 && !(msg.weatherData.rivers?.length > 0) && (
                             <AIHourlyForecastCard data={msg.weatherData} />
                           )}
-                          
-                          {(msg.userQuery.toLowerCase().includes("river") ||
-                            msg.userQuery.toLowerCase().includes("flood") ||
-                            msg.userQuery.toLowerCase().includes("ganga") ||
-                            msg.userQuery.toLowerCase().includes("alert") ||
-                            msg.userQuery.toLowerCase().includes("water")) && (
+                          {msg.weatherData.rivers?.length > 0 && (
                             <AIRiverTelemetryCard data={msg.weatherData} />
                           )}
                         </div>
@@ -1180,9 +1191,19 @@ export function AIAssistantInterface() {
                     // Assistant response (Plain text with action row)
                     <div className="w-full flex flex-col items-start gap-3">
                       {msg.isStreaming && (
-                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-neutral-400 bg-neutral-100 dark:bg-zinc-800/80 px-3.5 py-1.5 rounded-full shadow-sm">
-                          <Loader size={"xs"} className="text-neutral-500 dark:text-neutral-300" />
-                          <span>{msg.status || "Working…"}</span>
+                        <div className="flex items-center justify-start gap-2 mb-1">
+                          <p
+                            className="bg-[linear-gradient(110deg,#404040,35%,#fff,50%,#404040,75%,#404040)] dark:bg-[linear-gradient(110deg,#404040,35%,#fff,50%,#404040,75%,#404040)] bg-[length:200%_100%] bg-clip-text text-sm font-semibold text-transparent"
+                            style={{ animation: "shimmer 5s linear infinite" }}
+                          >
+                            {msg.status || "rainiX AI is thinking"}
+                          </p>
+                          <style jsx>{`
+                            @keyframes shimmer {
+                              0% { background-position: 200% 0; }
+                              100% { background-position: -200% 0; }
+                            }
+                          `}</style>
                         </div>
                       )}
                       {msg.isStructured && msg.thinking && (
@@ -1192,34 +1213,16 @@ export function AIAssistantInterface() {
                         {renderFormattedText(msg.text)}
                       </div>
                       
-                      {msg.weatherData && (
-                        <div className="w-full mt-2 flex flex-row flex-wrap items-start gap-4">
-                          {(!msg.userQuery.toLowerCase().includes("24 hour") &&
-                            !msg.userQuery.toLowerCase().includes("24 hrs") &&
-                            !msg.userQuery.toLowerCase().includes("24h") &&
-                            !msg.userQuery.toLowerCase().includes("hourly") &&
-                            !msg.userQuery.toLowerCase().includes("forecast") &&
-                            !msg.userQuery.toLowerCase().includes("river") &&
-                            !msg.userQuery.toLowerCase().includes("flood") &&
-                            !msg.userQuery.toLowerCase().includes("ganga") &&
-                            !msg.userQuery.toLowerCase().includes("water")) && (
+                      {msg.weatherData && !msg.isStreaming && (
+                        <div className="w-full mt-2 flex flex-row flex-wrap items-start gap-4 animate-fade-in-up">
+                          {/* Data-driven: show cards based on what data the API returned */}
+                          {msg.weatherData.weather && !(msg.weatherData.rivers?.length > 0) && (
                             <AICurrentWeatherCard data={msg.weatherData} />
                           )}
-                          
-                          {(msg.userQuery.toLowerCase().includes("24 hour") ||
-                            msg.userQuery.toLowerCase().includes("24 hrs") ||
-                            msg.userQuery.toLowerCase().includes("24h") ||
-                            msg.userQuery.toLowerCase().includes("hourly") ||
-                            msg.userQuery.toLowerCase().includes("forecast") ||
-                            msg.userQuery.toLowerCase().includes("tomorrow")) && (
+                          {msg.weatherData.weather?.weather?.hourly?.length > 0 && !(msg.weatherData.rivers?.length > 0) && (
                             <AIHourlyForecastCard data={msg.weatherData} />
                           )}
-                          
-                          {(msg.userQuery.toLowerCase().includes("river") ||
-                            msg.userQuery.toLowerCase().includes("flood") ||
-                            msg.userQuery.toLowerCase().includes("ganga") ||
-                            msg.userQuery.toLowerCase().includes("alert") ||
-                            msg.userQuery.toLowerCase().includes("water")) && (
+                          {msg.weatherData.rivers?.length > 0 && (
                             <AIRiverTelemetryCard data={msg.weatherData} />
                           )}
                         </div>

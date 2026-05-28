@@ -29,19 +29,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ──────────────────────────────────────────────────────────────────────
-# Google API Keys (3 keys for fallback rotation)
-# ──────────────────────────────────────────────────────────────────────
+
 GOOGLE_API_KEYS = {
     "A": os.getenv("GOOGLE_API_KEY_A", ""),
     "B": os.getenv("GOOGLE_API_KEY_B", ""),
     "C": os.getenv("GOOGLE_API_KEY_C", ""),
 }
 
-# ──────────────────────────────────────────────────────────────────────
-# Model definitions for each key
-# Each key gets its own set of 3 Google models
-# ──────────────────────────────────────────────────────────────────────
+
 MODEL_CONFIGS = [
     {"name": "google",  "model": "gemini-3.5-flash",    "label": "Gemini 3.5 Flash"},
     {"name": "gem3",    "model": "gemini-3.1-flash-lite","label": "Gemini 3.1 Lite"},
@@ -334,12 +329,22 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                             if final != last_final:
                                 last_final = final
                                 yield "event: final_partial\ndata: " + json.dumps({"content": last_final}) + "\n\n"
+                    
                     elif ev.get("event") == "on_tool_start":
                         name = ev.get("name") or "tool"
-                        yield "event: status\ndata: " + json.dumps({"content": f"Calling {name}..."}) + "\n\n"
+                        
+                        if name == "weather_tool":
+                            display_name = "Connecting to weather services..."
+                        elif name == "river_tool":
+                            display_name = "Fetching river telemetry..."
+                        elif name == "location_tool":
+                            display_name = "Finding nearby water sources..."
+                        else:
+                            display_name= "Working on a task..."
+                        yield "event: status\ndata: " + json.dumps({"content": display_name}) + "\n\n"
                     elif ev.get("event") == "on_tool_end":
                         name = ev.get("name") or "tool"
-                        yield "event: status\ndata: " + json.dumps({"content": f"Finished {name}."}) + "\n\n"
+                        yield "event: status\ndata: " + json.dumps({"content": "Thinking..."}) + "\n\n"
 
                 # Flush final from buffer (if tags present)
                 thinking, final = _extract_thinking_final(buffer)
