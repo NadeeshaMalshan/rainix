@@ -305,6 +305,9 @@ function AIRiverTelemetryCard({ data }) {
           minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
           
           // Check if we have a prediction to extend the graph
+          minX = 0;
+          maxX = xValues.length - 1 || 1;
+          
           const rid = river.id || river.name;
           predictedLevel = predictions[rid];
           let extendedMaxX = maxX;
