@@ -130,24 +130,20 @@ function AICurrentWeatherCard({ data }) {
   
   return (
     <div className="w-full max-w-md bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-5 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
-      {/* 60% base deep dark canvas / 30% secondary headers */}
       <div className="flex justify-between items-start mb-4">
         <div>
           <h4 className="font-semibold text-lg leading-tight text-gray-900 dark:text-neutral-100">{data.weather.city || data.city}</h4>
           <span className="text-xs text-gray-500 dark:text-neutral-400 opacity-80 font-normal">{data.weather.country || 'Sri Lanka'}</span>
         </div>
-        {/* 10% Accent: Sky Blue Header Icon */}
-        <span className="material-symbols-outlined text-3xl text-sky-500 dark:text-sky-400">{details.icon}</span>
+        <span className="material-symbols-outlined text-3xl text-gray-700 dark:text-neutral-300">{details.icon}</span>
       </div>
       
-      {/* 10% Accent: Vibrant main temperature */}
       <div className="flex items-baseline gap-2.5 mb-3">
-        <span className="text-4xl font-normal tracking-tight font-poppins text-sky-500 dark:text-sky-400">{temp}°C</span>
-        <span className="text-sm font-semibold text-sky-600 dark:text-sky-400/90">{details.label}</span>
+        <span className="text-4xl font-normal tracking-tight font-poppins text-gray-900 dark:text-neutral-100">{temp}°C</span>
+        <span className="text-sm font-medium text-gray-600 dark:text-neutral-300">{details.label}</span>
       </div>
       
-      {/* 30% Secondary: Muted grid styling and icons */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-neutral-200/50 dark:border-zinc-800/70 pt-3 text-xs md:text-sm font-medium">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-neutral-200/50 dark:border-zinc-800/70 pt-3 text-xs md:text-sm font-normal">
         <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
           <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">thermostat</span>
           <span>Feels Like: {Math.round(weather.feelsLike)}°C</span>
@@ -174,9 +170,9 @@ function AIHourlyForecastCard({ data }) {
   const hourly = data.weather.weather.hourly;
   
   return (
-    <div className="w-full max-w-lg bg-neutral-100/90 dark:bg-zinc-900/60 backdrop-blur-md rounded-2xl p-4 border border-neutral-200/50 dark:border-zinc-800/60 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
-      <h4 className="font-bold text-sm text-sky-600 dark:text-sky-400 mb-3 uppercase tracking-wider flex items-center gap-1.5 pl-1">
-        <span className="material-symbols-outlined text-sm">schedule</span>
+    <div className="w-full max-w-lg bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-4 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
+      <h4 className="font-semibold text-sm text-gray-900 dark:text-neutral-100 mb-3 uppercase tracking-wider flex items-center gap-1.5 pl-1 opacity-90">
+        <span className="material-symbols-outlined text-sm text-gray-600 dark:text-neutral-400">schedule</span>
         24-Hour Hourly Forecast
       </h4>
       <div className="flex overflow-x-auto gap-3.5 pb-2 scrollbar-thin pl-1">
@@ -187,10 +183,10 @@ function AIHourlyForecastCard({ data }) {
             timeLabel = h.time.split('T')[1].substring(0, 5);
           }
           return (
-            <div key={idx} className="flex flex-col items-center gap-1.5 bg-neutral-200/50 dark:bg-zinc-800/50 border border-neutral-300/30 dark:border-zinc-700/30 rounded-xl py-2.5 px-3 min-w-[70px] flex-shrink-0 transition-transform hover:scale-[1.03]">
-              <span className="text-xs font-semibold opacity-70">{timeLabel}</span>
-              <span className="material-symbols-outlined text-xl text-sky-500 dark:text-sky-400">{details.icon}</span>
-              <span className="text-sm font-extrabold">{Math.round(h.temperature)}°</span>
+            <div key={idx} className="flex flex-col items-center gap-1.5 border-none rounded-xl py-2 px-1 min-w-[50px] flex-shrink-0 transition-transform hover:scale-[1.03]">
+              <span className="text-xs font-normal text-gray-500 dark:text-neutral-400">{timeLabel}</span>
+              <span className="material-symbols-outlined text-xl text-gray-700 dark:text-neutral-300">{details.icon}</span>
+              <span className="text-sm font-medium">{Math.round(h.temperature)}°</span>
             </div>
           );
         })}
@@ -198,6 +194,41 @@ function AIHourlyForecastCard({ data }) {
     </div>
   );
 }
+
+function AIForecastDaysCard({ data, days = 14 }) {
+  if (!data || !data.weather || !data.weather.weather || !data.weather.weather.forecast14Days) return null;
+  
+  const forecastList = data.weather.weather.forecast14Days.slice(0, days);
+  
+  return (
+    <div className="w-full max-w-lg bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-4 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
+      <h4 className="font-semibold text-sm text-gray-900 dark:text-neutral-100 mb-3 uppercase tracking-wider flex items-center gap-1.5 pl-1 opacity-90">
+        <span className="material-symbols-outlined text-sm text-gray-600 dark:text-neutral-400">date_range</span>
+        {forecastList.length}-Day Forecast
+      </h4>
+      <div className="flex overflow-x-auto gap-3.5 pb-2 scrollbar-thin pl-1">
+        {forecastList.map((f, idx) => {
+          const details = getWeatherDetails(f.weatherCode);
+          const dateObj = new Date(f.date);
+          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+          const dateNum = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+          
+          return (
+            <div key={idx} className="flex flex-col items-center gap-1.5 border-none rounded-xl py-2 px-2 min-w-[65px] flex-shrink-0 transition-transform hover:scale-[1.03]">
+              <span className="text-xs font-normal text-gray-500 dark:text-neutral-400">{dayName}</span>
+              <span className="material-symbols-outlined text-xl text-gray-700 dark:text-neutral-300">{details.icon}</span>
+              <div className="flex flex-col items-center mt-1">
+                <span className="text-sm font-medium">{Math.round(f.high)}°</span>
+                <span className="text-xs font-normal text-gray-500 dark:text-neutral-500">{Math.round(f.low)}°</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 function AIRiverTelemetryCard({ data }) {
   if (!data || !data.rivers || data.rivers.length === 0) return null;
@@ -266,16 +297,17 @@ function AIRiverTelemetryCard({ data }) {
           ? Number(river.levels.alert)
           : null;
 
-        // Trend should reflect the most recent movement (minute-by-minute as requested)
+        // Trend should reflect the movement over a short window (e.g. last 5 mins ~ 5 points)
         let trendText = "Stable";
         if (hasHistory && river.historicalData.length >= 2) {
           const lastVal = Number(river.historicalData[river.historicalData.length - 1].y);
-          const prevVal = Number(river.historicalData[river.historicalData.length - 2].y);
+          // Compare with data from ~5 mins ago, or the earliest available if less than 5
+          const compareIndex = Math.max(0, river.historicalData.length - 5);
+          const prevVal = Number(river.historicalData[compareIndex].y);
           const diff = lastVal - prevVal;
           
-          // Even a 0.01m change immediately reflects as Rising/Falling
-          if (diff > 0) trendText = "Rising";
-          else if (diff < 0) trendText = "Falling";
+          if (diff > 0.02) trendText = "Rising";
+          else if (diff < -0.02) trendText = "Falling";
         }
         
         // Time labels (5 evenly spaced across 24h)
@@ -523,6 +555,7 @@ export function AIAssistantInterface() {
         let thinkingText = "";
         let statusLine = "Working…";
         let detectedBackendLocation = null;
+        let detectedBackendIntent = null;
         activeStreamStateRef.current = { assistantId, userText, finalText: "", thinkingText: "" };
 
         const updateAssistant = (patch) => {
@@ -560,6 +593,7 @@ export function AIAssistantInterface() {
             text: resolvedText,
             thinking: thinkingText || "",
             weatherData: fetchedData,
+            detectedIntent: detectedBackendIntent,
             isStreaming: false,
             status: ""
           });
@@ -600,6 +634,16 @@ export function AIAssistantInterface() {
             const payload = JSON.parse(e.data);
             if (payload.location) {
               detectedBackendLocation = payload.location;
+            }
+          } catch (_) {}
+        });
+
+        es.addEventListener("detected_intent", (e) => {
+          try {
+            const payload = JSON.parse(e.data);
+            if (payload.intent) {
+              detectedBackendIntent = payload.intent;
+              updateAssistant({ detectedIntent: detectedBackendIntent });
             }
           } catch (_) {}
         });
@@ -826,8 +870,7 @@ export function AIAssistantInterface() {
               {modelProvider === "auto" ? "Auto" : 
                modelProvider === "google" ? "Gemini 3.5 Flash" :
                modelProvider === "gem3" ? "Gemini 3.1 Lite" :
-               modelProvider === "gemma" ? "Gemma 4 (31B)" :
-               modelProvider === "openai" ? "GPT-4o Mini" : "Auto"}
+               modelProvider === "gemma" ? "Gemma 4 (31B)" : "Auto"}
               <ChevronUp className="w-3 h-3" />
             </button>
             
@@ -847,7 +890,6 @@ export function AIAssistantInterface() {
                       { id: "google", label: "Gemini 3.5 Flash" },
                       { id: "gem3", label: "Gemini 3.1 Lite" },
                       { id: "gemma", label: "Gemma 4 (31B)" },
-                      { id: "openai", label: "GPT-4o Mini" },
                     ].map((opt) => (
                       <button
                         key={opt.id}
@@ -1297,16 +1339,40 @@ export function AIAssistantInterface() {
                       </div>
                       {msg.weatherData && (
                         <div className="w-full mt-2 flex flex-row flex-wrap items-start gap-4">
-                          {/* Data-driven: show cards based on what data the API returned */}
-                          {msg.weatherData.weather && !(msg.weatherData.rivers?.length > 0) && (
-                            <AICurrentWeatherCard data={msg.weatherData} />
-                          )}
-                          {msg.weatherData.weather?.weather?.hourly?.length > 0 && !(msg.weatherData.rivers?.length > 0) && (
-                            <AIHourlyForecastCard data={msg.weatherData} />
-                          )}
-                          {msg.weatherData.rivers?.length > 0 && (
-                            <AIRiverTelemetryCard data={msg.weatherData} />
-                          )}
+                          {(() => {
+                            const intent = msg.detectedIntent;
+                            const query = (msg.userQuery || "").toLowerCase();
+                            const hasRivers = msg.weatherData.rivers?.length > 0;
+                            const hasWeather = !!msg.weatherData.weather;
+                            
+                            // If intent is purely river, show ONLY river
+                            if (intent === "river" && hasRivers) {
+                              return <AIRiverTelemetryCard data={msg.weatherData} />;
+                            }
+                            
+                            // If intent is weather, figure out which card
+                            if (intent === "weather" && hasWeather) {
+                              const askDays = query.match(/(?:forecast|dawas|days|day)\s*(\d+)/i) || query.includes("14");
+                              const askHourly = query.includes("24") || query.includes("hourly") || query.includes("peya");
+                              
+                              if (askDays) {
+                                const daysCount = query.match(/(\d+)/)?.[1] || 14;
+                                return <AIForecastDaysCard data={msg.weatherData} days={Number(daysCount)} />;
+                              } else if (askHourly) {
+                                return <AIHourlyForecastCard data={msg.weatherData} />;
+                              } else {
+                                return <AICurrentWeatherCard data={msg.weatherData} />;
+                              }
+                            }
+                            
+                            // Fallback if no intent or mixed
+                            return (
+                              <>
+                                {hasWeather && !hasRivers && <AICurrentWeatherCard data={msg.weatherData} />}
+                                {hasRivers && <AIRiverTelemetryCard data={msg.weatherData} />}
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>

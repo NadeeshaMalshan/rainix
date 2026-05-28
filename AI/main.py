@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from langchain_google_genai import (ChatGoogleGenerativeAI)
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import (create_react_agent)
@@ -60,12 +59,7 @@ for key_label, api_key in GOOGLE_API_KEYS.items():
         for cfg in MODEL_CONFIGS:
             key_llms[key_label][cfg["name"]] = _create_llm(cfg["model"], api_key)
 
-# OpenAI fallback (unchanged)
-llm_openai = ChatOpenAI(
-    model='gpt-4o-mini',
-    temperature=0.2,
-    streaming=True
-)
+# Only Google models are used now.
 
 @tool
 def weather_tool(city: str):
@@ -187,39 +181,15 @@ for key_label, llms in key_llms.items():
             checkpointer=memory
         )
 
-# OpenAI agent (single, unchanged)
-agent_openai = create_react_agent(
-    llm_openai,
-    tools=tools_list,
-    prompt=agent_prompt,
-    checkpointer=memory
-)
+# Only Google agents are used now.
 
 
 def _build_fallback_order(provider: str):
     """
-    Build the full fallback chain.
-
-    Strategy:
-      - For a specific Google model (e.g. "google"), try:
-        Key A google → Key B google → Key C google →
-        Key A gem3 → Key B gem3 → Key C gem3 →
-        Key A gemma → Key B gemma → Key C gemma → openai
-      - For "auto", same as "google" (starts with best model).
-      - For "openai", try openai first, then all Google combos.
-
-    Each entry is ("key_label", "model_name") or ("openai", "openai").
+    Build the full fallback chain for Google models.
     """
     available_keys = sorted(agents_by_key.keys())  # ["A", "B", "C"]
     model_names = [cfg["name"] for cfg in MODEL_CONFIGS]  # ["google", "gem3", "gemma"]
-
-    if provider == "openai":
-        chain = [("openai", "openai")]
-        for m in model_names:
-            for k in available_keys:
-                if m in agents_by_key.get(k, {}):
-                    chain.append((k, m))
-        return chain
 
     # Determine model priority order based on provider selection
     if provider in model_names:
@@ -234,21 +204,16 @@ def _build_fallback_order(provider: str):
         for k in available_keys:
             if m in agents_by_key.get(k, {}):
                 chain.append((k, m))
-    chain.append(("openai", "openai"))
     return chain
 
 
 def _get_agent(key_label: str, model_name: str):
-    """Get the agent for a given key+model combo, or the OpenAI agent."""
-    if key_label == "openai":
-        return agent_openai
+    """Get the agent for a given key+model combo."""
     return agents_by_key[key_label][model_name]
 
 
 def _get_provider_display(key_label: str, model_name: str):
     """Get a human-readable provider name for the response."""
-    if key_label == "openai":
-        return "openai"
     # Return model name with key suffix for transparency
     return f"{model_name} (Key {key_label})"
 
@@ -352,8 +317,10 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                             
                         if name == "weather_tool":
                             display_name = "Connecting to weather services..."
+                            yield "event: detected_intent\ndata: " + json.dumps({"intent": "weather"}) + "\n\n"
                         elif name == "river_tool":
                             display_name = "Fetching river telemetry..."
+                            yield "event: detected_intent\ndata: " + json.dumps({"intent": "river"}) + "\n\n"
                         elif name == "location_tool":
                             display_name = "Finding nearby water sources..."
                         else:
@@ -397,7 +364,6 @@ def feedback(session_id: str, type: str):
     for key_label, agents in agents_by_key.items():
         for model_name, agent in agents.items():
             agent.update_state(config, {"messages": [feedback_msg]})
-    agent_openai.update_state(config, {"messages": [feedback_msg]})
     return {"status": "success"}
     
     
