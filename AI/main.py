@@ -37,9 +37,9 @@ GOOGLE_API_KEYS = {
 
 
 MODEL_CONFIGS = [
-    {"name": "google",  "model": "gemini-1.5-flash",    "label": "Gemini 1.5 Flash"},
-    {"name": "gem3",    "model": "gemini-1.5-pro",      "label": "Gemini 1.5 Pro"},
-    {"name": "gemma",   "model": "gemma-2-27b-it",      "label": "Gemma 2 (27B)"},
+    {"name": "google",  "model": "gemini-3.5-flash",    "label": "Gemini 3.5 Flash"},
+    {"name": "gem3",    "model": "gemini-3.1-flash-lite","label": "Gemini 3.1 Lite"},
+    {"name": "gemma",   "model": "gemma-4-31b-it",      "label": "Gemma 4 (31B)"},
 ]
 
 def _create_llm(model_name: str, api_key: str):
