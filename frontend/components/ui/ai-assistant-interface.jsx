@@ -275,6 +275,8 @@ function AIRiverTelemetryCard({ data }) {
         
         let pointsString = "";
         let fillPointsString = "";
+        let coords = [];
+        let lastHistoricalCoord = null;
         let minVal = 0;
         let maxVal = 10;
         let minX = 0;
@@ -324,7 +326,7 @@ function AIRiverTelemetryCard({ data }) {
           }
           
           // X shifts: 40 to 350 to leave room for Y labels
-          const coords = river.historicalData.map((p, i) => {
+          coords = river.historicalData.map((p, i) => {
             const xSVG = ((i - minX) / (extendedMaxX - minX)) * 310 + 40;
             const ySVG = 110 - ((p.y - minVal) / (maxVal - minVal)) * 90;
             return { x: xSVG, y: ySVG, val: p.y };
@@ -333,7 +335,7 @@ function AIRiverTelemetryCard({ data }) {
           pointsString = coords.map(c => `${c.x},${c.y}`).join(" ");
           
           // Only fill the actual historical data
-          const lastHistoricalCoord = coords[coords.length - 1];
+          lastHistoricalCoord = coords[coords.length - 1];
           fillPointsString = `40,110 ${pointsString} ${lastHistoricalCoord.x},110`;
         }
         
