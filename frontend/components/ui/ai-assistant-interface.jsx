@@ -270,17 +270,15 @@ function AIRiverTelemetryCard({ data }) {
         const hasHistory = river.historicalData && river.historicalData.length > 0;
         const currentLevel = hasHistory ? river.historicalData[river.historicalData.length - 1].y : null;
         const isAlert = river.status === "ALERT";
-        const rid = river.id || river.name;
-        const predictedLevel = predictions[rid];
         
         let pointsString = "";
         let fillPointsString = "";
-        let coords = [];
-        let lastHistoricalCoord = null;
         let minVal = 0;
         let maxVal = 10;
         let minX = 0;
         let maxX = 1;
+        let predictedLevel = undefined;
+        let coords = [];
         
         const thresholds = [];
         if (river.levels?.minor) thresholds.push({ label: 'Minor', val: Number(river.levels.minor) });
@@ -307,6 +305,8 @@ function AIRiverTelemetryCard({ data }) {
           minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
           
           // Check if we have a prediction to extend the graph
+          const rid = river.id || river.name;
+          predictedLevel = predictions[rid];
           let extendedMaxX = maxX;
           let futurePoints = 0;
           
@@ -335,7 +335,7 @@ function AIRiverTelemetryCard({ data }) {
           pointsString = coords.map(c => `${c.x},${c.y}`).join(" ");
           
           // Only fill the actual historical data
-          lastHistoricalCoord = coords[coords.length - 1];
+          const lastHistoricalCoord = coords[coords.length - 1];
           fillPointsString = `40,110 ${pointsString} ${lastHistoricalCoord.x},110`;
         }
         
