@@ -1009,7 +1009,7 @@ export function AIAssistantInterface() {
   };
 
   return (
-    <div className="h-screen h-[100dvh] overflow-hidden flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
+    <div className="h-screen h-[100svh] overflow-hidden flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
       <style dangerouslySetInnerHTML={{ __html: `
         .responsive-ai-input-landing {
           width: 100% !important;
@@ -1381,9 +1381,23 @@ export function AIAssistantInterface() {
                   className={`w-full flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.sender === "user" ? (
-                    // User message bubble (ChatGPT Style)
-                    <div className="bg-neutral-100 dark:bg-zinc-800 text-gray-900 dark:text-neutral-100 rounded-full px-5 py-2.5 max-w-[75%] text-base shadow-sm">
-                      {msg.text}
+                    // User message bubble with Edit button
+                    <div className="flex flex-col items-end gap-1.5 max-w-[75%] group">
+                      <div className="bg-neutral-100 dark:bg-zinc-800 text-gray-900 dark:text-neutral-100 rounded-3xl px-5 py-2.5 text-base shadow-sm break-words w-auto">
+                        {msg.text}
+                      </div>
+                      
+                      {/* Edit Button - Visible on mobile, hover-only on desktop */}
+                      <button 
+                        onClick={() => {
+                          setInputValue(msg.text);
+                          if (inputRef.current) inputRef.current.focus();
+                        }}
+                        className="flex items-center justify-center p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors mr-2 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        title="Edit prompt"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">edit</span>
+                      </button>
                     </div>
                   ) : msg.isError ? (
                     // Beautiful Error / Fallback developer console card
