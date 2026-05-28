@@ -7,7 +7,7 @@ export default function App({ Component, pageProps }) {
     <>
       <Head>
         <meta charSet="utf-8" />
-        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content" name="viewport" />
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport" />
         
         {/* Tailwind CSS Play CDN */}
         <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>

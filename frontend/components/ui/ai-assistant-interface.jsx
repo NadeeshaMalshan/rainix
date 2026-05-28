@@ -529,7 +529,6 @@ export function AIAssistantInterface() {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
   const sessionIdRef = useRef(null);
@@ -537,33 +536,6 @@ export function AIAssistantInterface() {
   if (!sessionIdRef.current) {
     sessionIdRef.current = Math.random().toString(36).substring(7);
   }
-
-  // Handle Mobile Keyboard overlay
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.visualViewport) return;
-    
-    const handleResize = () => {
-      // Calculate how much the visual viewport shrank relative to the window innerHeight
-      const offset = window.innerHeight - window.visualViewport.height;
-      // If it shrank by more than 100px, assume the keyboard is open
-      if (offset > 100) {
-        setKeyboardOffset(offset);
-      } else {
-        setKeyboardOffset(0);
-      }
-    };
-    
-    // Initial check
-    handleResize();
-    
-    window.visualViewport.addEventListener('resize', handleResize);
-    window.visualViewport.addEventListener('scroll', handleResize); // Sometimes scroll fires instead
-    
-    return () => {
-      window.visualViewport.removeEventListener('resize', handleResize);
-      window.visualViewport.removeEventListener('scroll', handleResize);
-    };
-  }, []);
 
   // Auto-scroll to bottom of conversation
   useEffect(() => {
@@ -1009,7 +981,7 @@ export function AIAssistantInterface() {
   };
 
   return (
-    <div className="h-screen h-[100svh] overflow-hidden flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
+    <div className="h-[100dvh] overflow-hidden flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
       <style dangerouslySetInnerHTML={{ __html: `
         .responsive-ai-input-landing {
           width: 100% !important;
@@ -1596,10 +1568,7 @@ export function AIAssistantInterface() {
 
       {/* Input container at the bottom (only shown when chat is active) */}
       {messages.length > 0 && (
-        <div 
-          className="w-full flex justify-center py-4 bg-gradient-to-t from-white dark:from-[#0d0d0d] via-white dark:via-[#0d0d0d] to-transparent sticky bottom-0 transition-transform duration-200 ease-out z-40"
-          style={{ transform: `translateY(-${keyboardOffset}px)` }}
-        >
+        <div className="w-full flex justify-center py-4 bg-gradient-to-t from-white dark:from-[#0d0d0d] via-white dark:via-[#0d0d0d] to-transparent sticky bottom-0 z-40">
           <div className="responsive-ai-input-chat px-4 flex flex-col gap-2">
             {renderInputBar()}
           </div>
