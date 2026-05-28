@@ -231,6 +231,37 @@ function AIForecastDaysCard({ data, days = 14 }) {
 
 
 function AIRiverTelemetryCard({ data }) {
+  const [predictions, setPredictions] = React.useState({});
+
+  React.useEffect(() => {
+    if (!data || !data.rivers) return;
+    
+    data.rivers.forEach(async (river) => {
+      const rid = river.id || river.name;
+      if (predictions[rid] !== undefined) return;
+      
+      try {
+        const payload = {
+          river_name: river.name,
+          historical_data: river.historicalData || [],
+          weather_data: data
+        };
+        const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://localhost:7860").replace(/\/$/, "");
+        const res = await fetch(`${aiApiUrl}/api/predict/river`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.predicted_level !== null && json.predicted_level !== undefined) {
+          setPredictions(prev => ({...prev, [rid]: json.predicted_level}));
+        }
+      } catch (e) {
+        console.error("Prediction fetch failed:", e);
+      }
+    });
+  }, [data]);
+
   if (!data || !data.rivers || data.rivers.length === 0) return null;
   
   return (
@@ -271,18 +302,39 @@ function AIRiverTelemetryCard({ data }) {
           maxVal = maxVal + (diff > 0 ? diff * 0.15 : 1);
           minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
           
-          minX = 0;
-          maxX = xValues.length - 1 || 1;
+          // Check if we have a prediction to extend the graph
+          const rid = river.id || river.name;
+          const predictedLevel = predictions[rid];
+          let extendedMaxX = maxX;
+          let futurePoints = 0;
+          
+          if (predictedLevel !== undefined) {
+            // Include predicted value in Y axis scaling
+            if (predictedLevel > maxVal) maxVal = predictedLevel;
+            if (predictedLevel < minVal) minVal = predictedLevel;
+            
+            // Re-adjust diff to include padding around the predicted value
+            const diff = maxVal - minVal;
+            maxVal = maxVal + (diff > 0 ? diff * 0.15 : 1);
+            minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
+            
+            // Assume historicalData is 24h. 3h is 3/24 = 1/8 of the data points length.
+            futurePoints = Math.max(1, Math.floor(xValues.length / 8));
+            extendedMaxX = maxX + futurePoints;
+          }
           
           // X shifts: 40 to 350 to leave room for Y labels
           const coords = river.historicalData.map((p, i) => {
-            const xSVG = ((i - minX) / (maxX - minX)) * 310 + 40;
+            const xSVG = ((i - minX) / (extendedMaxX - minX)) * 310 + 40;
             const ySVG = 110 - ((p.y - minVal) / (maxVal - minVal)) * 90;
-            return { x: xSVG, y: ySVG };
+            return { x: xSVG, y: ySVG, val: p.y };
           });
           
           pointsString = coords.map(c => `${c.x},${c.y}`).join(" ");
-          fillPointsString = `40,110 ${pointsString} 350,110`;
+          
+          // Only fill the actual historical data
+          const lastHistoricalCoord = coords[coords.length - 1];
+          fillPointsString = `40,110 ${pointsString} ${lastHistoricalCoord.x},110`;
         }
         
         let statusBg = "bg-neutral-100 dark:bg-zinc-800/80 text-gray-900 dark:text-neutral-100 border-neutral-200 dark:border-zinc-700/60";
@@ -297,17 +349,18 @@ function AIRiverTelemetryCard({ data }) {
           ? Number(river.levels.alert)
           : null;
 
-        // Trend should reflect the movement over a short window (e.g. last 5 mins ~ 5 points)
+        // Trend should reflect the movement over a short window (e.g. last 5 mins)
         let trendText = "Stable";
         if (hasHistory && river.historicalData.length >= 2) {
           const lastVal = Number(river.historicalData[river.historicalData.length - 1].y);
-          // Compare with data from ~5 mins ago, or the earliest available if less than 5
+          // Compare with data from ~5 mins ago (or 5 points ago depending on resolution)
           const compareIndex = Math.max(0, river.historicalData.length - 5);
           const prevVal = Number(river.historicalData[compareIndex].y);
           const diff = lastVal - prevVal;
           
-          if (diff > 0.02) trendText = "Rising";
-          else if (diff < -0.02) trendText = "Falling";
+          // Lowered threshold because a 5-minute window is very small
+          if (diff > 0.001) trendText = "Rising";
+          else if (diff < -0.001) trendText = "Falling";
         }
         
         // Time labels (5 evenly spaced across 24h)
@@ -412,19 +465,44 @@ function AIRiverTelemetryCard({ data }) {
                     className="drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                   />
                   
+                  {predictedLevel !== undefined && (
+                    <polyline
+                      fill="none"
+                      stroke={strokeColor}
+                      strokeWidth="2.5"
+                      strokeDasharray="4 4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      points={`${coords[coords.length - 1].x},${coords[coords.length - 1].y} 350,${110 - ((predictedLevel - minVal) / (maxVal - minVal)) * 90}`}
+                      className="drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)] opacity-80"
+                    />
+                  )}
+                  
                   {river.historicalData.length > 1 && (
                     <>
                       <circle cx="40" cy={110 - ((river.historicalData[0].y - minVal) / (maxVal - minVal)) * 90} r="3.5" fill={strokeColor} />
-                      <circle cx="350" cy={110 - ((river.historicalData[river.historicalData.length - 1].y - minVal) / (maxVal - minVal)) * 90} r="4.5" fill={strokeColor} stroke="white" strokeWidth="1.5" />
+                      <circle cx={coords[coords.length - 1].x} cy={coords[coords.length - 1].y} r="4.5" fill={strokeColor} stroke="white" strokeWidth="1.5" />
+                      
+                      {predictedLevel !== undefined && (
+                        <circle cx="350" cy={110 - ((predictedLevel - minVal) / (maxVal - minVal)) * 90} r="3.5" fill="none" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="2 1" />
+                      )}
                     </>
                   )}
                 </svg>
                 
                 {/* X-axis Time Labels */}
-                <div className="flex justify-between text-[9px] opacity-60 mt-2 font-mono text-gray-500 dark:text-neutral-400 pl-[35px]">
-                  {timeLabels.map((time, i) => (
-                    <span key={i}>{time}</span>
-                  ))}
+                <div className="flex justify-between text-[9px] opacity-60 mt-2 font-mono text-gray-500 dark:text-neutral-400" style={{ paddingLeft: "40px", paddingRight: predictedLevel !== undefined ? "0px" : "10px" }}>
+                  {timeLabels.map((time, i) => {
+                     // Spread out evenly across the available width
+                     if (i === timeLabels.length - 1 && predictedLevel !== undefined) {
+                         // We have a prediction, so we leave room at the end for the +3H label
+                         return <span key={i}>{time}</span>;
+                     }
+                     return <span key={i}>{time}</span>;
+                  })}
+                  {predictedLevel !== undefined && (
+                    <span className="text-blue-500 dark:text-blue-400 font-bold">+3H</span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -887,9 +965,9 @@ export function AIAssistantInterface() {
                   >
                     {[
                       { id: "auto", label: "Auto" },
-                      { id: "google", label: "Gemini 3.5 Flash" },
-                      { id: "gem3", label: "Gemini 3.1 Lite" },
-                      { id: "gemma", label: "Gemma 4 (31B)" },
+                      { id: "google", label: "Gemini 1.5 Flash" },
+                      { id: "gem3", label: "Gemini 1.5 Pro" },
+                      { id: "gemma", label: "Gemma 2 (27B)" },
                     ].map((opt) => (
                       <button
                         key={opt.id}
@@ -1404,16 +1482,58 @@ export function AIAssistantInterface() {
                       
                       {msg.weatherData && !msg.isStreaming && (
                         <div className="w-full mt-2 flex flex-row flex-wrap items-start gap-4 animate-fade-in-up">
-                          {/* Data-driven: show cards based on what data the API returned */}
-                          {msg.weatherData.weather && !(msg.weatherData.rivers?.length > 0) && (
-                            <AICurrentWeatherCard data={msg.weatherData} />
-                          )}
-                          {msg.weatherData.weather?.weather?.hourly?.length > 0 && !(msg.weatherData.rivers?.length > 0) && (
-                            <AIHourlyForecastCard data={msg.weatherData} />
-                          )}
-                          {msg.weatherData.rivers?.length > 0 && (
-                            <AIRiverTelemetryCard data={msg.weatherData} />
-                          )}
+                          {(() => {
+                            const intent = msg.detectedIntent;
+                            const query = (msg.userQuery || "").toLowerCase();
+                            const hasRivers = msg.weatherData.rivers?.length > 0;
+                            const hasWeather = !!msg.weatherData.weather;
+                            
+                            const isExplicitWeather = query.includes("weather") || query.includes("kalanaguna") || query.includes("dawas") || query.includes("dina") || query.includes("forecast") || query.includes("wesi") || query.includes("rain");
+                            const isExplicitRiver = query.includes("river") || query.includes("ganga") || query.includes("wathura") || query.includes("water") || query.includes("level") || query.includes("mattama");
+                            
+                            let showWeather = false;
+                            let showRiver = false;
+
+                            if (isExplicitWeather && isExplicitRiver) {
+                                showWeather = hasWeather;
+                                showRiver = hasRivers;
+                            } else if (isExplicitWeather) {
+                                showWeather = hasWeather;
+                                showRiver = false;
+                            } else if (isExplicitRiver) {
+                                showWeather = false;
+                                showRiver = hasRivers;
+                            } else {
+                                // Default to intent if no explicit words
+                                if (intent === "weather") {
+                                    showWeather = hasWeather;
+                                } else if (intent === "river") {
+                                    showRiver = hasRivers;
+                                } else {
+                                    showWeather = hasWeather;
+                                    showRiver = hasRivers;
+                                }
+                            }
+                            
+                            return (
+                              <>
+                                {showWeather && (() => {
+                                  const askDays = query.match(/(?:forecast|dawas|dina|days|day)\s*(\d+)/i) || query.includes("14") || query.includes("dina 5");
+                                  const askHourly = query.includes("24") || query.includes("hourly") || query.includes("peya");
+                                  
+                                  if (askDays) {
+                                    const daysCount = query.match(/(\d+)/)?.[1] || 14;
+                                    return <AIForecastDaysCard data={msg.weatherData} days={Number(daysCount)} />;
+                                  } else if (askHourly) {
+                                    return <AIHourlyForecastCard data={msg.weatherData} />;
+                                  } else {
+                                    return <AICurrentWeatherCard data={msg.weatherData} />;
+                                  }
+                                })()}
+                                {showRiver && <AIRiverTelemetryCard data={msg.weatherData} />}
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
                       

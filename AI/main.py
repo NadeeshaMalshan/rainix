@@ -37,9 +37,9 @@ GOOGLE_API_KEYS = {
 
 
 MODEL_CONFIGS = [
-    {"name": "google",  "model": "gemini-3.5-flash",    "label": "Gemini 3.5 Flash"},
-    {"name": "gem3",    "model": "gemini-3.1-flash-lite","label": "Gemini 3.1 Lite"},
-    {"name": "gemma",   "model": "gemma-4-31b-it",      "label": "Gemma 4 (31B)"},
+    {"name": "google",  "model": "gemini-1.5-flash",    "label": "Gemini 1.5 Flash"},
+    {"name": "gem3",    "model": "gemini-1.5-pro",      "label": "Gemini 1.5 Pro"},
+    {"name": "gemma",   "model": "gemma-2-27b-it",      "label": "Gemma 2 (27B)"},
 ]
 
 def _create_llm(model_name: str, api_key: str):
@@ -339,8 +339,12 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                 yield "event: status\ndata: " + json.dumps({"content": f"Provider {prov_display} failed, trying next..."}) + "\n\n"
                 await asyncio.sleep(0.05)
 
-        diagnostic = "All providers failed.\n" + json.dumps(errors, indent=2)
-        yield "event: error\ndata: " + json.dumps({"message": diagnostic}) + "\n\n"
+        diagnostic = "I'm sorry, I encountered an issue connecting to all available AI model providers (Google Gemini).\n\n"
+        for prov, err in errors.items():
+            diagnostic += f"* **{prov}**: Issue ({err[:100]}...)\n"
+        diagnostic += "\n*Please check your Google API keys and quota limits.*"
+        
+        yield "event: done\ndata: " + json.dumps({"thinking": "", "final": diagnostic}) + "\n\n"
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
     
@@ -366,7 +370,78 @@ def feedback(session_id: str, type: str):
             agent.update_state(config, {"messages": [feedback_msg]})
     return {"status": "success"}
     
-    
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+
+class RiverPredictionRequest(BaseModel):
+    river_name: str
+    historical_data: List[Dict[str, Any]]
+    weather_data: Optional[Dict[str, Any]] = None
+
+@app.post("/api/predict/river")
+async def predict_river_level(req: RiverPredictionRequest):
+    try:
+        if not req.historical_data:
+            return {"predicted_level": None, "error": "No historical data provided"}
+            
+        current_level = req.historical_data[-1].get("y")
+        if current_level is None:
+            return {"predicted_level": None, "error": "No current level found"}
+            
+        # Format the data for the LLM
+        recent_history = req.historical_data[-60:] # Last hour if 1pt/min
+        history_str = ", ".join([str(p.get("y")) for p in recent_history if p.get("y") is not None])
+        
+        weather_str = "No specific weather data available."
+        if req.weather_data:
+            # Extract relevant forecast (next 3 hours)
+            hourly = req.weather_data.get("weather", {}).get("hourly", [])
+            if hourly and len(hourly) > 3:
+                next_3h = hourly[1:4]
+                weather_str = f"Next 3 hours rainfall: {[h.get('precip_mm', 0) for h in next_3h]} mm."
+            else:
+                weather_str = f"Today's rain chance: {req.weather_data.get('weather', {}).get('daily', [{}])[0].get('daily_chance_of_rain', 0)}%"
+
+        prompt = f"""
+You are an expert hydrological AI. Your task is to predict the water level of {req.river_name} EXACTLY 3 hours from now.
+Use the following real-time data:
+1. Current Level: {current_level}m
+2. Recent History (last {len(recent_history)} points): [{history_str}]
+3. Weather Context: {weather_str}
+
+Analyze the rate of change in the history and the expected rainfall.
+IMPORTANT: You MUST return ONLY a raw JSON object with NO markdown formatting, NO backticks, and NO explanations.
+Format:
+{{"predicted_level": 5.45}}
+"""
+        
+        # We will use the first available agent/LLM (e.g., Key A Google)
+        available_keys = sorted(key_llms.keys())
+        if not available_keys:
+            return {"predicted_level": None, "error": "No AI providers available"}
+            
+        llm = key_llms[available_keys[0]]["google"] # Default to Gemini Flash
+        response = await llm.ainvoke(prompt)
+        content = response.content.strip()
+        
+        # Clean up any markdown code blocks the LLM might have ignored instructions and added
+        if content.startswith("```json"):
+            content = content[7:-3].strip()
+        elif content.startswith("```"):
+            content = content[3:-3].strip()
+            
+        try:
+            data = json.loads(content)
+            predicted_level = float(data.get("predicted_level", current_level))
+            return {"predicted_level": predicted_level}
+        except json.JSONDecodeError:
+            print("Failed to decode JSON from prediction:", content)
+            return {"predicted_level": current_level, "error": "Invalid prediction format"}
+
+    except Exception as e:
+        print("Prediction error:", str(e))
+        return {"predicted_level": None, "error": str(e)}
+
 @app.get("/")
 def root():
 
