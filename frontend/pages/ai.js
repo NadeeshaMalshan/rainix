@@ -4,7 +4,7 @@ import { AIAssistantInterface } from "../components/ui/ai-assistant-interface"
 
 export default function Demo() {
   return (
-    <div className="w-full h-[100dvh] overflow-hidden bg-white dark:bg-[#0d0d0d]">
+    <div className="fixed inset-0 w-full overflow-hidden bg-white dark:bg-[#0d0d0d]">
       <Head>
         <title>rainiX AI Assistant</title>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
