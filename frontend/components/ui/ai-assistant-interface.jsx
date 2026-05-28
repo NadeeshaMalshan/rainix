@@ -970,9 +970,9 @@ export function AIAssistantInterface() {
                   >
                     {[
                       { id: "auto", label: "Auto" },
-                      { id: "google", label: "Gemini 1.5 Flash" },
-                      { id: "gem3", label: "Gemini 1.5 Pro" },
-                      { id: "gemma", label: "Gemma 2 (27B)" },
+                      { id: "google", label: "Gemini 3.5 Flash" },
+                      { id: "gem3", label: "Gemini 3.1 Lite" },
+                      { id: "gemma", label: "Gemma 4 (31B)" },
                     ].map((opt) => (
                       <button
                         key={opt.id}
