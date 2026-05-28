@@ -270,6 +270,8 @@ function AIRiverTelemetryCard({ data }) {
         const hasHistory = river.historicalData && river.historicalData.length > 0;
         const currentLevel = hasHistory ? river.historicalData[river.historicalData.length - 1].y : null;
         const isAlert = river.status === "ALERT";
+        const rid = river.id || river.name;
+        const predictedLevel = predictions[rid];
         
         let pointsString = "";
         let fillPointsString = "";
@@ -303,8 +305,6 @@ function AIRiverTelemetryCard({ data }) {
           minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
           
           // Check if we have a prediction to extend the graph
-          const rid = river.id || river.name;
-          const predictedLevel = predictions[rid];
           let extendedMaxX = maxX;
           let futurePoints = 0;
           
