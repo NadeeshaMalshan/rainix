@@ -20,7 +20,7 @@ export default function App({ Component, pageProps }) {
         <script id="tailwind-config" dangerouslySetInnerHTML={{
           __html: `
             tailwind.config = {
-                darkMode: "media",
+                darkMode: "class",
                 theme: {
                     extend: {
                         "screens": {

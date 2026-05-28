@@ -22,7 +22,12 @@ import {
   ChevronRight,
   BrainCircuit,
   Settings,
-  X
+  X,
+  ChevronUp,
+  Palette,
+  Moon,
+  Sun,
+  Monitor
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import AIThinkingBlock from "./ai-thinking-block";
@@ -40,24 +45,35 @@ const knownCities = [
 ];
 
 const detectCity = (userText, assistantText) => {
-  const combined = `${userText} ${assistantText || ""}`.toLowerCase();
+  const combined = `${userText || ""} ${assistantText || ""}`.toLowerCase();
   
-  const cleanUser = userText.trim().toLowerCase();
+  const cleanUser = (userText || "").trim().toLowerCase();
   const greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "howdy", "yo", "hi there", "hello there"];
   if (greetings.includes(cleanUser) || cleanUser.length <= 3) {
     return null;
   }
   
+  // ─── Known River Station Cities ───
+  const knownCities = [
+    "colombo", "kandy", "galle", "jaffna", "matara", "kurunegala", "ratnapura", 
+    "trincomalee", "batticaloa", "anuradhapura", "badulla", "kegalle", "nuwara eliya", 
+    "puttalam", "kalutara", "gampaha", "matale", "hambantota", "polonnaruwa", "monaragala", 
+    "ampara", "vavuniya", "mannar", "kilinochchi", "mullaitivu", "kuruvita", "kuruwita",
+    "kelaniya", "kaduwela", "hanwella", "mapitigama", "pugoda", "ruwanwella", "avissawella",
+    "wellampitiya", "kolonnawa", "millakanda", "putupaula", "ayagama", "pelmadulla",
+    "kalawana", "kahawaththa", "kahawatta", "elapatha", "bangama", "polothugama",
+    "hulandawa", "warapitiya", "kekiriobada", "peradeniya", "gampola", "teldeniya",
+    "katugastota", "chilaw", "ridibendiella", "sengaloya", "wanathawilluwa", "pahariya",
+    "rambewa", "poonawa", "habarana", "wattala", "miriswatta"
+  ];
+
   for (const city of knownCities) {
-    const regex = new RegExp(`\\b${city}\\b`, 'i');
-    if (regex.test(combined)) {
+    if (combined.includes(city)) {
       return city.charAt(0).toUpperCase() + city.slice(1);
     }
   }
 
   // ─── River name → City mappings (detected from AI's English response) ───
-  // AI always mentions the river name in English, so this catches everything
-  // regardless of what language the user typed in.
   const riverCityMap = [
     { rivers: ["kalu ganga", "kalu gange", "kalu"], city: "Ratnapura" },
     { rivers: ["kelani ganga", "kelani gange", "kelani"], city: "Colombo" },
@@ -76,6 +92,9 @@ const detectCity = (userText, assistantText) => {
     { rivers: ["niriella ganga", "niriella gange"], city: "Elapatha" },
     { rivers: ["galathura oya"], city: "Ayagama" },
     { rivers: ["mundeni aru"], city: "Batticaloa" },
+    { rivers: ["magalawattuwan oya", "magalawattuwan"], city: "Batticaloa" },
+    { rivers: ["maduru oya", "maduru"], city: "Batticaloa" },
+    { rivers: ["andella oya", "andella"], city: "Batticaloa" },
     { rivers: ["uruwal oya"], city: "Gampaha" },
     { rivers: ["kalu ela"], city: "Gampaha" },
     { rivers: ["hali ela"], city: "Badulla" },
@@ -197,11 +216,25 @@ function AIRiverTelemetryCard({ data }) {
         let minX = 0;
         let maxX = 1;
         
+        const thresholds = [];
+        if (river.levels?.minor) thresholds.push({ label: 'Minor', val: Number(river.levels.minor) });
+        if (river.levels?.alert) thresholds.push({ label: 'Alert', val: Number(river.levels.alert) });
+        if (river.levels?.major) thresholds.push({ label: 'Major', val: Number(river.levels.major) });
+        if (river.levels?.critical) thresholds.push({ label: 'Critical', val: Number(river.levels.critical) });
+        
         if (hasHistory) {
           const yValues = river.historicalData.map(p => p.y);
           const xValues = river.historicalData.map((_, i) => i);
           minVal = Math.min(...yValues);
           maxVal = Math.max(...yValues);
+          
+          // Expand maxVal to include nearby thresholds so lines are visible
+          const relevantThresholds = thresholds.filter(t => t.val >= minVal && t.val <= maxVal * 1.5);
+          if (relevantThresholds.length > 0) {
+            const maxT = Math.max(...relevantThresholds.map(t => t.val));
+            if (maxT > maxVal) maxVal = maxT;
+          }
+          
           const diff = maxVal - minVal;
           maxVal = maxVal + (diff > 0 ? diff * 0.15 : 1);
           minVal = Math.max(0, minVal - (diff > 0 ? diff * 0.15 : 1));
@@ -209,14 +242,15 @@ function AIRiverTelemetryCard({ data }) {
           minX = 0;
           maxX = xValues.length - 1 || 1;
           
+          // X shifts: 40 to 350 to leave room for Y labels
           const coords = river.historicalData.map((p, i) => {
-            const xSVG = ((i - minX) / (maxX - minX)) * 340 + 10;
+            const xSVG = ((i - minX) / (maxX - minX)) * 310 + 40;
             const ySVG = 110 - ((p.y - minVal) / (maxVal - minVal)) * 90;
             return { x: xSVG, y: ySVG };
           });
           
           pointsString = coords.map(c => `${c.x},${c.y}`).join(" ");
-          fillPointsString = `10,110 ${pointsString} 350,110`;
+          fillPointsString = `40,110 ${pointsString} 350,110`;
         }
         
         let statusBg = "bg-neutral-100 dark:bg-zinc-800/80 text-gray-900 dark:text-neutral-100 border-neutral-200 dark:border-zinc-700/60";
@@ -229,23 +263,30 @@ function AIRiverTelemetryCard({ data }) {
         const lowerName = river.name.toLowerCase();
         const alertLimitVal = (river.levels && river.levels.alert !== undefined && river.levels.alert !== null)
           ? Number(river.levels.alert)
-          : (lowerName.includes("kelani") ? 5.00 : lowerName.includes("kalu") ? 4.00 : lowerName.includes("nilwala") ? 4.50 : 4.00);
+          : null;
 
-        // Trend should reflect the most recent movement, not older swings.
-        // Example: 7:00 = 5.0m, 7:30 = 5.5m => Rising (even if earlier it fell).
+        // Trend should reflect the most recent movement (minute-by-minute as requested)
         let trendText = "Stable";
         if (hasHistory && river.historicalData.length >= 2) {
           const lastVal = Number(river.historicalData[river.historicalData.length - 1].y);
           const prevVal = Number(river.historicalData[river.historicalData.length - 2].y);
           const diff = lastVal - prevVal;
-          const eps = 0.01;
-          if (diff > eps) trendText = "Rising";
-          else if (diff < -eps) trendText = "Falling";
+          
+          // Even a 0.01m change immediately reflects as Rising/Falling
+          if (diff > 0) trendText = "Rising";
+          else if (diff < 0) trendText = "Falling";
+        }
+        
+        // Time labels (5 evenly spaced across 24h)
+        const timeLabels = [];
+        const nowMs = Date.now();
+        for (let i = 0; i <= 4; i++) {
+          const t = new Date(nowMs - (24 - i * 6) * 3600 * 1000);
+          timeLabels.push(t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         }
 
         return (
           <div key={idx} className="w-full max-w-md bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-5 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
-            {/* 60% base deep dark canvas / 30% secondary headers */}
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h4 className="font-semibold text-lg leading-tight text-gray-900 dark:text-neutral-100">
@@ -255,13 +296,11 @@ function AIRiverTelemetryCard({ data }) {
                   {lowerName.includes("kelani") ? "Kelani Ganga Basin" : lowerName.includes("kalu") ? "Kalu Ganga Basin" : lowerName.includes("nilwala") ? "Nilwala Ganga Basin" : "Active River Station"}
                 </span>
               </div>
-              {/* 10% Accent: Pure monochrome layout matching the theme header icon */}
               <span className="material-symbols-outlined text-3xl text-gray-900 dark:text-neutral-100">
                 waves
               </span>
             </div>
             
-            {/* 10% Accent: High-contrast white/black metrics and labels */}
             <div className="flex items-baseline gap-2.5 mb-3">
               <span className="text-4xl font-normal tracking-tight font-poppins text-gray-900 dark:text-neutral-100">
                 {currentLevel !== null ? `${currentLevel.toFixed(2)}m` : 'N/A'}
@@ -271,11 +310,10 @@ function AIRiverTelemetryCard({ data }) {
               </span>
             </div>
             
-            {/* 30% Secondary: Muted grid styling and gray icons */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-neutral-200/50 dark:border-zinc-800/70 pt-3 text-xs md:text-sm font-medium">
               <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
                 <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">warning</span>
-                <span>Alert Limit: {alertLimitVal.toFixed(2)}m</span>
+                <span>Alert Limit: {alertLimitVal !== null ? `${alertLimitVal.toFixed(2)}m` : 'Unknown'}</span>
               </div>
               <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
                 <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">trending_up</span>
@@ -305,9 +343,29 @@ function AIRiverTelemetryCard({ data }) {
                     </linearGradient>
                   </defs>
                   
-                  <line x1="10" y1="110" x2="350" y2="110" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" />
-                  <line x1="10" y1="65" x2="350" y2="65" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" strokeDasharray="3,3" />
-                  <line x1="10" y1="20" x2="350" y2="20" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" />
+                  {/* Y-axis Labels & Grid */}
+                  <text x="32" y="24" fontSize="9" fill="currentColor" opacity="0.5" textAnchor="end">{maxVal.toFixed(1)}m</text>
+                  <line x1="40" y1="20" x2="350" y2="20" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" />
+                  
+                  <text x="32" y="69" fontSize="9" fill="currentColor" opacity="0.5" textAnchor="end">{((maxVal + minVal) / 2).toFixed(1)}m</text>
+                  <line x1="40" y1="65" x2="350" y2="65" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" strokeDasharray="3,3" />
+                  
+                  <text x="32" y="114" fontSize="9" fill="currentColor" opacity="0.5" textAnchor="end">{minVal.toFixed(1)}m</text>
+                  <line x1="40" y1="110" x2="350" y2="110" stroke="currentColor" strokeWidth="1" strokeOpacity="0.08" />
+                  
+                  {/* Threshold Lines */}
+                  {thresholds.map((t, i) => {
+                    if (t.val >= minVal && t.val <= maxVal) {
+                      const tY = 110 - ((t.val - minVal) / (maxVal - minVal)) * 90;
+                      return (
+                        <g key={`t-${i}`}>
+                          <line x1="40" y1={tY} x2="350" y2={tY} stroke="currentColor" strokeWidth="1" strokeDasharray="4,4" strokeOpacity="0.35" />
+                          <text x="350" y={tY - 4} fontSize="8" fill="currentColor" opacity="0.6" textAnchor="end">{t.label} ({t.val.toFixed(1)}m)</text>
+                        </g>
+                      );
+                    }
+                    return null;
+                  })}
                   
                   <polygon points={fillPointsString} fill={`url(#${gradientId})`} />
                   
@@ -323,14 +381,17 @@ function AIRiverTelemetryCard({ data }) {
                   
                   {river.historicalData.length > 1 && (
                     <>
-                      <circle cx="10" cy={110 - ((river.historicalData[0].y - minVal) / (maxVal - minVal)) * 90} r="3.5" fill={strokeColor} />
+                      <circle cx="40" cy={110 - ((river.historicalData[0].y - minVal) / (maxVal - minVal)) * 90} r="3.5" fill={strokeColor} />
                       <circle cx="350" cy={110 - ((river.historicalData[river.historicalData.length - 1].y - minVal) / (maxVal - minVal)) * 90} r="4.5" fill={strokeColor} stroke="white" strokeWidth="1.5" />
                     </>
                   )}
                 </svg>
-                <div className="flex justify-between text-[9px] opacity-60 mt-1.5 font-mono text-gray-500 dark:text-neutral-400">
-                  <span>-24h</span>
-                  <span>Now</span>
+                
+                {/* X-axis Time Labels */}
+                <div className="flex justify-between text-[9px] opacity-60 mt-2 font-mono text-gray-500 dark:text-neutral-400 pl-[35px]">
+                  {timeLabels.map((time, i) => (
+                    <span key={i}>{time}</span>
+                  ))}
                 </div>
               </div>
             ) : (
@@ -349,6 +410,8 @@ export function AIAssistantInterface() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
   const [modelProvider, setModelProvider] = useState("auto");
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const activeEventSourceRef = useRef(null);
   const activeStreamStateRef = useRef({ assistantId: null, userText: "", finalText: "", thinkingText: "" });
 
@@ -742,12 +805,60 @@ export function AIAssistantInterface() {
 
         {/* Right-side utility and submit button */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            className="p-2 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors"
-            title="Voice input"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
+          {/* Custom Model Selector */}
+          <div className="relative flex items-center group mr-1">
+            <button
+              onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+              className="flex items-center gap-1 bg-transparent text-[12px] font-medium text-gray-500 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-200 transition-colors focus:outline-none"
+            >
+              {modelProvider === "auto" ? "Auto" : 
+               modelProvider === "google" ? "Gemini 3.5 Flash" :
+               modelProvider === "gem3" ? "Gemini 3.1 Lite" :
+               modelProvider === "gemma" ? "Gemma 4 (31B)" :
+               modelProvider === "openai" ? "GPT-4o Mini" : "Auto"}
+              <ChevronUp className="w-3 h-3" />
+            </button>
+            
+            <AnimatePresence>
+              {isModelMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsModelMenuOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute bottom-full right-0 mb-3 w-40 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-zinc-800 rounded-[12px] shadow-lg z-50 overflow-hidden flex flex-col py-1"
+                  >
+                    {[
+                      { id: "auto", label: "Auto" },
+                      { id: "google", label: "Gemini 3.5 Flash" },
+                      { id: "gem3", label: "Gemini 3.1 Lite" },
+                      { id: "gemma", label: "Gemma 4 (31B)" },
+                      { id: "openai", label: "GPT-4o Mini" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          handleModelProviderChange(opt.id);
+                          setIsModelMenuOpen(false);
+                        }}
+                        className={`text-left px-3 py-2 text-xs transition-colors ${
+                          modelProvider === opt.id
+                            ? "bg-neutral-100 dark:bg-zinc-800 text-gray-900 dark:text-white font-semibold"
+                            : "text-gray-700 dark:text-neutral-300 hover:bg-neutral-100/50 dark:hover:bg-zinc-800/50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          
           
           {/* White circle audio action button (ChatGPT wave representation) */}
           <button
@@ -1193,7 +1304,7 @@ export function AIAssistantInterface() {
                       {msg.isStreaming && (
                         <div className="flex items-center justify-start gap-2 mb-1">
                           <p
-                            className="bg-[linear-gradient(110deg,#404040,35%,#fff,50%,#404040,75%,#404040)] dark:bg-[linear-gradient(110deg,#404040,35%,#fff,50%,#404040,75%,#404040)] bg-[length:200%_100%] bg-clip-text text-sm font-semibold text-transparent"
+                            className="bg-[linear-gradient(110deg,#404040,35%,#fff,50%,#404040,75%,#404040)] dark:bg-[linear-gradient(110deg,#404040,35%,#fff,50%,#404040,75%,#404040)] bg-[length:200%_100%] bg-clip-text text-sm font-normal text-transparent"
                             style={{ animation: "shimmer 5s linear infinite" }}
                           >
                             {msg.status || "rainiX AI is thinking"}
@@ -1229,44 +1340,46 @@ export function AIAssistantInterface() {
                       )}
                       
                       {/* Action Row */}
-                      <div className="flex items-center gap-3.5 mt-2 text-gray-400 dark:text-neutral-500">
-                        <button 
-                          onClick={() => handleCopyText(msg.text)} 
-                          className="p-1 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors cursor-pointer" 
-                          title="Copy text"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleFeedback(msg.id, 'good')} 
-                          className={`p-1 transition-colors cursor-pointer ${
-                            msg.feedback === 'good' 
-                              ? 'text-emerald-500 dark:text-emerald-400' 
-                              : 'hover:text-gray-600 dark:hover:text-neutral-300'
-                          }`} 
-                          title="Good response"
-                        >
-                          <ThumbsUp className="w-4 h-4" style={{ fill: msg.feedback === 'good' ? 'currentColor' : 'none' }} />
-                        </button>
-                        <button 
-                          onClick={() => handleFeedback(msg.id, 'bad')} 
-                          className={`p-1 transition-colors cursor-pointer ${
-                            msg.feedback === 'bad' 
-                              ? 'text-rose-500 dark:text-rose-400' 
-                              : 'hover:text-gray-600 dark:hover:text-neutral-300'
-                          }`} 
-                          title="Bad response"
-                        >
-                          <ThumbsDown className="w-4 h-4" style={{ fill: msg.feedback === 'bad' ? 'currentColor' : 'none' }} />
-                        </button>
-                        <button 
-                          onClick={() => handleRegenerate(msg.userQuery)} 
-                          className="p-1 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors cursor-pointer" 
-                          title="Regenerate"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {!msg.isStreaming && (
+                        <div className="flex items-center gap-3.5 mt-2 text-gray-400 dark:text-neutral-500 animate-fade-in-up">
+                          <button 
+                            onClick={() => handleCopyText(msg.text)} 
+                            className="p-1 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors cursor-pointer" 
+                            title="Copy text"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleFeedback(msg.id, 'good')} 
+                            className={`p-1 transition-colors cursor-pointer ${
+                              msg.feedback === 'good' 
+                                ? 'text-emerald-500 dark:text-emerald-400' 
+                                : 'hover:text-gray-600 dark:hover:text-neutral-300'
+                            }`} 
+                            title="Good response"
+                          >
+                            <ThumbsUp className="w-4 h-4" style={{ fill: msg.feedback === 'good' ? 'currentColor' : 'none' }} />
+                          </button>
+                          <button 
+                            onClick={() => handleFeedback(msg.id, 'bad')} 
+                            className={`p-1 transition-colors cursor-pointer ${
+                              msg.feedback === 'bad' 
+                                ? 'text-rose-500 dark:text-rose-400' 
+                                : 'hover:text-gray-600 dark:hover:text-neutral-300'
+                            }`} 
+                            title="Bad response"
+                          >
+                            <ThumbsDown className="w-4 h-4" style={{ fill: msg.feedback === 'bad' ? 'currentColor' : 'none' }} />
+                          </button>
+                          <button 
+                            onClick={() => handleRegenerate(msg.userQuery)} 
+                            className="p-1 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors cursor-pointer" 
+                            title="Regenerate"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </motion.div>
@@ -1305,7 +1418,7 @@ export function AIAssistantInterface() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", duration: 0.35 }}
-              className="bg-white dark:bg-[#161616] border border-neutral-200 dark:border-zinc-800 rounded-3xl w-full max-w-md p-6 shadow-2xl z-50 relative overflow-hidden"
+              className="bg-white dark:bg-[#161616] border border-neutral-200 dark:border-zinc-800 rounded-3xl w-full max-w-md p-6 shadow-2xl z-50 relative overflow-visible"
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -1321,63 +1434,66 @@ export function AIAssistantInterface() {
                 </button>
               </div>
 
-              {/* Model Provider Selector */}
-              <div className="flex flex-col gap-3 mt-6 border-t border-neutral-200/50 dark:border-zinc-800/40 pt-5">
+              {/* Appearance Selector */}
+              <div className="flex items-center justify-between mt-6 border-t border-neutral-200/50 dark:border-zinc-800/40 pt-5">
                 <span className="text-xs uppercase tracking-wider font-semibold text-gray-400 dark:text-neutral-500 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-500" />
-                  AI Intelligence Model
+                  <Palette className="w-3.5 h-3.5 text-gray-500 dark:text-neutral-400" />
+                  Appearance
                 </span>
-                <div className="grid grid-cols-2 gap-2 bg-neutral-100 dark:bg-zinc-900/60 p-2 rounded-2xl border border-neutral-200/50 dark:border-zinc-800/40">
+                
+                <div className="relative">
                   <button
-                    onClick={() => handleModelProviderChange("google")}
-                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      modelProvider === "google"
-                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
-                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                    }`}
+                    onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
+                    className="flex items-center justify-between gap-2 bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white px-3 py-1.5 rounded-xl text-xs font-medium transition-colors focus:outline-none w-28"
                   >
-                    Gemini 3.5 Flash
+                    <div className="flex items-center gap-1.5">
+                      {theme === "light" ? <Sun className="w-3.5 h-3.5" /> : 
+                       theme === "dark" ? <Moon className="w-3.5 h-3.5" /> : 
+                       <Monitor className="w-3.5 h-3.5" />}
+                      <span className="capitalize">{theme}</span>
+                    </div>
+                    <ChevronDown className="w-3 h-3 text-gray-500" />
                   </button>
-                  <button
-                    onClick={() => handleModelProviderChange("gem3")}
-                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      modelProvider === "gem3"
-                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
-                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                    }`}
-                  >
-                    Gemini 3.1 Lite
-                  </button>
-                  <button
-                    onClick={() => handleModelProviderChange("gemma")}
-                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      modelProvider === "gemma"
-                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
-                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                    }`}
-                  >
-                    Gemma 4 (31B)
-                  </button>
-                  <button
-                    onClick={() => handleModelProviderChange("openai")}
-                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      modelProvider === "openai"
-                        ? "bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm animate-neon"
-                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                    }`}
-                  >
-                    GPT-4o Mini
-                  </button>
-                  <button
-                    onClick={() => handleModelProviderChange("auto")}
-                    className={`col-span-2 py-2.5 px-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                      modelProvider === "auto"
-                        ? "bg-white dark:bg-zinc-800 text-sky-600 dark:text-sky-400 shadow-sm border border-sky-500/20"
-                        : "text-gray-500 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200 bg-neutral-200/40 dark:bg-zinc-800/35"
-                    }`}
-                  >
-                    🚀 Auto-Switch (Robust)
-                  </button>
+
+                  <AnimatePresence>
+                    {isThemeMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsThemeMenuOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute top-full right-0 mt-2 w-32 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-zinc-800 rounded-[12px] shadow-lg z-50 overflow-hidden flex flex-col py-1"
+                        >
+                          {[
+                            { id: "light", label: "Light", icon: Sun },
+                            { id: "dark", label: "Dark", icon: Moon },
+                            { id: "system", label: "System", icon: Monitor },
+                          ].map((opt) => {
+                            const Icon = opt.icon;
+                            return (
+                              <button
+                                key={opt.id}
+                                onClick={() => {
+                                  handleThemeChange(opt.id);
+                                  setIsThemeMenuOpen(false);
+                                }}
+                                className={`flex items-center gap-2 text-left px-3 py-2 text-xs transition-colors font-medium ${
+                                  theme === opt.id
+                                    ? "bg-neutral-100 dark:bg-zinc-800 text-gray-900 dark:text-white"
+                                    : "text-gray-700 dark:text-neutral-300 hover:bg-neutral-100/50 dark:hover:bg-zinc-800/50"
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </motion.div>

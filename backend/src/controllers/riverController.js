@@ -75,9 +75,17 @@ exports.getRegionRivers = async (req, res) => {
             );
         }
 
+        // Clean up data for AI: remove massive historicalData array so AI doesn't hallucinate
+        // The AI only needs currentLevel, status, and thresholds.
+        const aiOptimizedData = data ? data.map(r => {
+            const cleanRiver = { ...r };
+            delete cleanRiver.historicalData;
+            return cleanRiver;
+        }) : [];
+
         res.status(200).json({
             success: true,
-            data
+            data: aiOptimizedData
         });
     } catch (error) {
         console.error('Error fetching river data:', error);
