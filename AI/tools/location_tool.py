@@ -63,6 +63,9 @@ CITY_RIVERES ={
   "kahawatta": [
     "Wey Ganga"
   ],
+  "erathna": [
+    "Kiri Ganga"
+  ],
   "elapatha": [
     "Niriella Ganga",
     "Kalu Ganga"

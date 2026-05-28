@@ -121,6 +121,8 @@ agent_prompt = (
 
 "- Formulate a friendly, highly professional, and reassuring final response using clear bullet lists and bold text for telemetry details.\n"
 
+"- CRITICAL: Even if you are responding in Sinhala or another language, you MUST include the exact English name of the river (e.g., 'Kiri Ganga', 'Kalu Ganga', 'Kelani Ganga', etc.) in your final output (you can put it in brackets). This is strictly required for the UI to display the telemetry cards!\n"
+
 "- If any tool returns empty/null, do not loop or call it repeatedly; state that the specific metric was unavailable and continue with the remaining data."
 
     "OUTPUT FORMAT (return exactly this, nothing else):\n"
@@ -342,6 +344,12 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                     elif ev.get("event") == "on_tool_start":
                         name = ev.get("name") or "tool"
                         
+                        # Extract exact location from tool inputs for the frontend
+                        input_data = ev.get("data", {}).get("input", {})
+                        loc = input_data.get("region") or input_data.get("city")
+                        if loc and isinstance(loc, str):
+                            yield "event: detected_location\ndata: " + json.dumps({"location": loc}) + "\n\n"
+                            
                         if name == "weather_tool":
                             display_name = "Connecting to weather services..."
                         elif name == "river_tool":

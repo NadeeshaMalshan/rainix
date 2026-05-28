@@ -203,7 +203,7 @@ function AIRiverTelemetryCard({ data }) {
   if (!data || !data.rivers || data.rivers.length === 0) return null;
   
   return (
-    <div className="w-full flex flex-row flex-wrap gap-4 mt-3 animate-fade-in-up">
+    <div className="w-full flex flex-row gap-4 mt-3 animate-fade-in-up overflow-x-auto pb-2 snap-x hide-scrollbar">
       {data.rivers.map((river, idx) => {
         const hasHistory = river.historicalData && river.historicalData.length > 0;
         const currentLevel = hasHistory ? river.historicalData[river.historicalData.length - 1].y : null;
@@ -228,11 +228,12 @@ function AIRiverTelemetryCard({ data }) {
           minVal = Math.min(...yValues);
           maxVal = Math.max(...yValues);
           
-          // Expand maxVal to include nearby thresholds so lines are visible
-          const relevantThresholds = thresholds.filter(t => t.val >= minVal && t.val <= maxVal * 1.5);
-          if (relevantThresholds.length > 0) {
-            const maxT = Math.max(...relevantThresholds.map(t => t.val));
+          // Expand maxVal and minVal to include ALL thresholds so threshold lines are always visible
+          if (thresholds.length > 0) {
+            const maxT = Math.max(...thresholds.map(t => t.val));
+            const minT = Math.min(...thresholds.map(t => t.val));
             if (maxT > maxVal) maxVal = maxT;
+            if (minT < minVal) minVal = minT;
           }
           
           const diff = maxVal - minVal;
@@ -286,7 +287,7 @@ function AIRiverTelemetryCard({ data }) {
         }
 
         return (
-          <div key={idx} className="w-full max-w-md bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-5 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 mt-3 animate-fade-in-up">
+          <div key={idx} className="w-full min-w-[320px] max-w-md flex-shrink-0 snap-center bg-[#f9f9fb]/90 dark:bg-[#121214]/90 backdrop-blur-md rounded-2xl p-5 border border-neutral-200/50 dark:border-zinc-800/70 shadow-md text-left text-gray-900 dark:text-neutral-100 animate-fade-in-up">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h4 className="font-semibold text-lg leading-tight text-gray-900 dark:text-neutral-100">
@@ -521,6 +522,7 @@ export function AIAssistantInterface() {
         let finalText = "";
         let thinkingText = "";
         let statusLine = "Working…";
+        let detectedBackendLocation = null;
         activeStreamStateRef.current = { assistantId, userText, finalText: "", thinkingText: "" };
 
         const updateAssistant = (patch) => {
@@ -535,7 +537,8 @@ export function AIAssistantInterface() {
           finalText = final ?? finalText;
 
           // Fetch weather cards after we know the final assistant text
-          const detected = detectCity(userText, finalText || "");
+          // Prioritize the exact location detected from the AI's internal tool calls!
+          const detected = detectedBackendLocation || detectCity(userText, finalText || "");
           let fetchedData = null;
           if (detected) {
             try {
@@ -589,6 +592,15 @@ export function AIAssistantInterface() {
             finalText = payload.content || "";
             activeStreamStateRef.current.finalText = finalText;
             updateAssistant({ text: finalText });
+          } catch (_) {}
+        });
+
+        es.addEventListener("detected_location", (e) => {
+          try {
+            const payload = JSON.parse(e.data);
+            if (payload.location) {
+              detectedBackendLocation = payload.location;
+            }
           } catch (_) {}
         });
 
