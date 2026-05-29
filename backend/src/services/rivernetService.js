@@ -20,10 +20,6 @@ exports.getRegionDevices = async (region) => {
    
     const response = await axios.get(url);
 
-    console.log(
-  JSON.stringify(response.data, null, 2)
-);
-
     const rivers =
       response.data?.results?.basinRiverDevices?.[region];
 
@@ -170,7 +166,8 @@ exports.getRiversByLocation = async (
         .trim()
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "")
-        .replace(/w/g, "v");
+        .replace(/w/g, "v")
+        .replace(/th/g, "t");
     };
 
     const normSearch = normalize(searchLocation);

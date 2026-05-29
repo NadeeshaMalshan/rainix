@@ -1,10 +1,31 @@
 const axios = require("axios");
 const {fetchWeatherByCity, fetchWeatherData} = require("../services/weatherService");
 const {
-  getRiversByLocation,
+  getRiversByLocation: getArcgisRiversByLocation
+} = require("../services/arcgisService");
+const {
+  getRiversByLocation: getRivernetRiversByLocation,
   getRiverChart
 } = require("../services/rivernetService");
 const {getRadarMetaData} = require("../services/rainviewer");
+
+const normalize = (str) => {
+    if (!str) return "";
+    return str.trim().toLowerCase().replace(/[^a-z0-9]/g, "").replace(/w/g, "v").replace(/th/g, "t");
+};
+
+const mergeRivers = (rivernetData, arcgisData) => {
+    const data = [...(rivernetData || [])];
+    const existingNames = new Set(data.map(r => normalize(r.name)));
+    for (const arcRiver of (arcgisData || [])) {
+        if (arcRiver.id === "arcgis_rathnapura") continue; // Removed as requested
+        const normName = normalize(arcRiver.name);
+        if (!existingNames.has(normName)) {
+            data.push(arcRiver);
+        }
+    }
+    return data;
+};
 
 exports.getCityOverview = async (req, res) => {
     try {
@@ -49,10 +70,37 @@ exports.getCityOverview = async (req, res) => {
         console.log("Weather OK");
 
         console.log("Fetching rivers...");
-        const rivers = await getRiversByLocation(resolvedCityName);
+        let rivernetRivers = [];
+        let arcgisRivers = [];
+        try {
+            rivernetRivers = await getRivernetRiversByLocation(resolvedCityName);
+        } catch (e) { console.error(e); }
+
+        try {
+            arcgisRivers = await getArcgisRiversByLocation(resolvedCityName);
+        } catch (e) { console.error(e); }
+
+        let rivers = mergeRivers(rivernetRivers, arcgisRivers);
         console.log("Rivers OK");
 
-        // Enrich rivers with actual 24-hour historical chart data
+        // Filter to only include rivers relevant to the city
+        const regionTownMap = {
+            "kalutara": ["putupaula", "ellagawa", "kalawellawa", "kalawellawa (millakanda)", "millakanda", "magura", "kalutara", "bulathsinhala", "palindanuwara"],
+            "ratnapura": ["ratnapura", "rathnapura"]
+        };
+
+        const normCity = normalize(resolvedCityName);
+        if (normCity && rivers.length > 0) {
+            const validTowns = regionTownMap[normCity] || [normCity];
+            rivers = rivers.filter(river => {
+                if (!river.city && !river.area) return false;
+                const nCity = normalize(river.city);
+                const nArea = normalize(river.area);
+                return validTowns.some(town => nCity.includes(town) || nArea.includes(town));
+            });
+        }
+
+        // Enrich rivernet rivers with actual 24-hour historical chart data
         if (rivers && rivers.length > 0) {
             console.log("Enriching rivers with historical chart data...");
             await Promise.all(
@@ -81,7 +129,9 @@ exports.getCityOverview = async (req, res) => {
                         }
                     } else {
                         river.historicalData = [];
-                        river.status = "UNKNOWN";
+                        if (river.status === undefined || river.status === null) {
+                            river.status = "UNKNOWN";
+                        }
                     }
                 })
             );

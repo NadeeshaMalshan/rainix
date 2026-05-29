@@ -267,8 +267,11 @@ function AIRiverTelemetryCard({ data }) {
   return (
     <div className="w-full flex flex-row gap-4 mt-3 animate-fade-in-up overflow-x-auto pb-2 snap-x hide-scrollbar">
       {data.rivers.map((river, idx) => {
-        const hasHistory = river.historicalData && river.historicalData.length > 0;
-        const currentLevel = hasHistory ? river.historicalData[river.historicalData.length - 1].y : null;
+        const hasHistory = Array.isArray(river.historicalData) && river.historicalData.length > 0;
+        let currentLevel = river.currentLevel;
+        if (currentLevel === undefined && hasHistory) {
+          currentLevel = river.historicalData[river.historicalData.length - 1].y;
+        }
         const isAlert = river.status === "ALERT";
         
         let pointsString = "";
@@ -378,7 +381,7 @@ function AIRiverTelemetryCard({ data }) {
             
             <div className="flex items-baseline gap-2.5 mb-3">
               <span className="text-4xl font-normal tracking-tight font-poppins text-gray-900 dark:text-neutral-100">
-                {currentLevel !== null ? `${currentLevel.toFixed(2)}m` : 'N/A'}
+                {currentLevel != null ? `${currentLevel.toFixed(2)}m` : 'N/A'}
               </span>
               <span className="text-sm font-semibold text-gray-900 dark:text-neutral-100">
                 {river.status === "ALERT" ? "High Alert" : "Safe"}
