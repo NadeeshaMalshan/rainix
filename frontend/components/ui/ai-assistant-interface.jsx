@@ -234,9 +234,10 @@ function AIRiverTelemetryCard({ data }) {
   const [predictions, setPredictions] = React.useState({});
 
   React.useEffect(() => {
-    if (!data || !data.rivers) return;
+    const rivers = Array.isArray(data) ? data : data?.rivers;
+    if (!rivers) return;
     
-    data.rivers.forEach(async (river) => {
+    rivers.forEach(async (river) => {
       const rid = river.id || river.name;
       if (predictions[rid] !== undefined) return;
       
@@ -262,11 +263,12 @@ function AIRiverTelemetryCard({ data }) {
     });
   }, [data]);
 
-  if (!data || !data.rivers || data.rivers.length === 0) return null;
+  const rivers = Array.isArray(data) ? data : data?.rivers;
+  if (!rivers || rivers.length === 0) return null;
   
   return (
     <div className="w-full flex flex-row gap-4 mt-3 animate-fade-in-up overflow-x-auto pb-2 snap-x hide-scrollbar">
-      {data.rivers.map((river, idx) => {
+      {rivers.map((river, idx) => {
         const hasHistory = Array.isArray(river.historicalData) && river.historicalData.length > 0;
         let currentLevel = river.currentLevel;
         if (currentLevel === undefined && hasHistory) {
@@ -624,12 +626,8 @@ export function AIAssistantInterface() {
               const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
               let url = `${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`;
               
-              if (detectedBackendIntent === "river") {
-                if (detectedBackendIsBasin) {
+              if (detectedBackendIntent === "river" && detectedBackendIsBasin) {
                   url = `${nodeApiUrl}/api/rivers/${encodeURIComponent(detected)}`;
-                } else {
-                  url = `${nodeApiUrl}/api/rivers/area/${encodeURIComponent(detected)}`;
-                }
               }
               
               const res = await fetch(url);
@@ -1415,8 +1413,8 @@ export function AIAssistantInterface() {
                           {(() => {
                             const intent = msg.detectedIntent;
                             const query = (msg.userQuery || "").toLowerCase();
-                            const hasRivers = msg.weatherData.rivers?.length > 0;
-                            const hasWeather = !!msg.weatherData.weather;
+                            const hasRivers = Array.isArray(msg.weatherData) ? msg.weatherData.length > 0 : msg.weatherData.rivers?.length > 0;
+                            const hasWeather = Array.isArray(msg.weatherData) ? false : !!msg.weatherData.weather;
                             
                             // If intent is purely river, show ONLY river
                             if (intent === "river" && hasRivers) {
@@ -1441,7 +1439,7 @@ export function AIAssistantInterface() {
                             // Fallback if no intent or mixed
                             return (
                               <>
-                                {hasWeather && !hasRivers && <AICurrentWeatherCard data={msg.weatherData} />}
+                                {hasWeather && <AICurrentWeatherCard data={msg.weatherData} />}
                                 {hasRivers && <AIRiverTelemetryCard data={msg.weatherData} />}
                               </>
                             );
@@ -1480,8 +1478,8 @@ export function AIAssistantInterface() {
                           {(() => {
                             const intent = msg.detectedIntent;
                             const query = (msg.userQuery || "").toLowerCase();
-                            const hasRivers = msg.weatherData.rivers?.length > 0;
-                            const hasWeather = !!msg.weatherData.weather;
+                            const hasRivers = Array.isArray(msg.weatherData) ? msg.weatherData.length > 0 : msg.weatherData.rivers?.length > 0;
+                            const hasWeather = Array.isArray(msg.weatherData) ? false : !!msg.weatherData.weather;
                             
                             const isExplicitWeather = query.includes("weather") || query.includes("kalanaguna") || query.includes("dawas") || query.includes("dina") || query.includes("forecast") || query.includes("wesi") || query.includes("rain");
                             const isExplicitRiver = query.includes("river") || query.includes("ganga") || query.includes("wathura") || query.includes("water") || query.includes("level") || query.includes("mattama");
@@ -1500,14 +1498,8 @@ export function AIAssistantInterface() {
                                 showRiver = hasRivers;
                             } else {
                                 // Default to intent if no explicit words
-                                if (intent === "weather") {
-                                    showWeather = hasWeather;
-                                } else if (intent === "river") {
-                                    showRiver = hasRivers;
-                                } else {
-                                    showWeather = hasWeather;
-                                    showRiver = hasRivers;
-                                }
+                                showWeather = hasWeather;
+                                showRiver = hasRivers;
                             }
                             
                             return (
