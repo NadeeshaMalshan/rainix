@@ -83,22 +83,7 @@ exports.getCityOverview = async (req, res) => {
         let rivers = mergeRivers(rivernetRivers, arcgisRivers);
         console.log("Rivers OK");
 
-        // Filter to only include rivers relevant to the city
-        const regionTownMap = {
-            "kalutara": ["putupaula", "ellagawa", "kalawellawa", "kalawellawa (millakanda)", "millakanda", "magura", "kalutara", "bulathsinhala", "palindanuwara"],
-            "ratnapura": ["ratnapura", "rathnapura"]
-        };
-
-        const normCity = normalize(resolvedCityName);
-        if (normCity && rivers.length > 0) {
-            const validTowns = regionTownMap[normCity] || [normCity];
-            rivers = rivers.filter(river => {
-                if (!river.city && !river.area) return false;
-                const nCity = normalize(river.city);
-                const nArea = normalize(river.area);
-                return validTowns.some(town => nCity.includes(town) || nArea.includes(town));
-            });
-        }
+        // Rivers are already filtered by their respective services
 
         // Enrich rivernet rivers with actual 24-hour historical chart data
         if (rivers && rivers.length > 0) {
