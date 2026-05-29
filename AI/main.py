@@ -313,8 +313,9 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                         # Extract exact location from tool inputs for the frontend
                         input_data = ev.get("data", {}).get("input", {})
                         loc = input_data.get("location") or input_data.get("region") or input_data.get("city")
+                        is_basin = input_data.get("is_basin", False)
                         if loc and isinstance(loc, str):
-                            yield "event: detected_location\ndata: " + json.dumps({"location": loc}) + "\n\n"
+                            yield "event: detected_location\ndata: " + json.dumps({"location": loc, "is_basin": is_basin}) + "\n\n"
                             
                         if name == "weather_tool":
                             display_name = "Connecting to weather services..."

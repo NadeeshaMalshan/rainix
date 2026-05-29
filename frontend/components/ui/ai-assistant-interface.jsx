@@ -600,6 +600,7 @@ export function AIAssistantInterface() {
         let thinkingText = "";
         let statusLine = "Working…";
         let detectedBackendLocation = null;
+        let detectedBackendIsBasin = false;
         let detectedBackendIntent = null;
         activeStreamStateRef.current = { assistantId, userText, finalText: "", thinkingText: "" };
 
@@ -614,8 +615,6 @@ export function AIAssistantInterface() {
           thinkingText = thinking ?? thinkingText;
           finalText = final ?? finalText;
 
-          // Fetch weather cards after we know the final assistant text
-          // If the backend gave us a location, it might be a river name. Let's map it.
           const mappedBackendLoc = detectedBackendLocation ? detectCity(detectedBackendLocation, "") : null;
           const detected = mappedBackendLoc || detectedBackendLocation || detectCity(userText, finalText || "");
           
@@ -623,7 +622,17 @@ export function AIAssistantInterface() {
           if (detected) {
             try {
               const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-              const res = await fetch(`${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`);
+              let url = `${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`;
+              
+              if (detectedBackendIntent === "river") {
+                if (detectedBackendIsBasin) {
+                  url = `${nodeApiUrl}/api/rivers/${encodeURIComponent(detected)}`;
+                } else {
+                  url = `${nodeApiUrl}/api/rivers/area/${encodeURIComponent(detected)}`;
+                }
+              }
+              
+              const res = await fetch(url);
               const json = await res.json();
               if (json.success && json.data) fetchedData = json.data;
             } catch (fetchErr) {
@@ -683,6 +692,7 @@ export function AIAssistantInterface() {
             const payload = JSON.parse(e.data);
             if (payload.location) {
               detectedBackendLocation = payload.location;
+              detectedBackendIsBasin = payload.is_basin || false;
             }
           } catch (_) {}
         });
