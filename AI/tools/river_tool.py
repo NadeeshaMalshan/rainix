@@ -1,14 +1,19 @@
 import requests
 import os
-def get_river_alerts(city):
-    
+
+def get_river_alerts(location, is_basin=False):
     try:
         node_api_url = os.getenv("NODE_API_URL", "http://localhost:5000").rstrip("/")
-        url = (f"{node_api_url}/api/rivers/{city}")
+        if is_basin:
+            riverName = location
+            url = f"{node_api_url}/api/rivers/{riverName}"
+        else:
+            url = f"{node_api_url}/api/rivers/area/{location}"
+            
         response = requests.get(url)
 
         # DEBUG
-        print("River API Status:", response.status_code)
+        print(f"River API Status ({url}):", response.status_code)
 
         # if backend failed
         if response.status_code != 200:
