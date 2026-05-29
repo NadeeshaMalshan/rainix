@@ -533,6 +533,7 @@ export function AIAssistantInterface() {
 
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState([]);
+  const [editingMessageId, setEditingMessageId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -571,7 +572,24 @@ export function AIAssistantInterface() {
         sender: "user",
         text: userText,
       };
-      setMessages((prev) => [...prev, userMsg]);
+      
+      setMessages((prev) => {
+        let newMessages = [...prev];
+        if (editingMessageId) {
+          const idx = newMessages.findIndex(m => m.id === editingMessageId);
+          if (idx !== -1) {
+            newMessages = newMessages.slice(0, idx); // Undo UI history
+          }
+        }
+        return [...newMessages, userMsg];
+      });
+      
+      if (editingMessageId) {
+        // Clear AI backend history by generating a new session ID
+        sessionIdRef.current = Math.random().toString(36).substring(7);
+        setEditingMessageId(null);
+      }
+      
       setInputValue("");
       setIsLoading(true);
 
@@ -624,10 +642,10 @@ export function AIAssistantInterface() {
           if (detected) {
             try {
               const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-              let url = `${nodeApiUrl}/api/city/${encodeURIComponent(detected)}`;
+              let url = `${nodeApiUrl}/api/city/${encodeURIComponent(detected)}?full=true`;
               
               if (detectedBackendIntent === "river" && detectedBackendIsBasin) {
-                  url = `${nodeApiUrl}/api/rivers/${encodeURIComponent(detected)}`;
+                  url = `${nodeApiUrl}/api/rivers/${encodeURIComponent(detected)}?full=true`;
               }
               
               const res = await fetch(url);
@@ -855,9 +873,19 @@ export function AIAssistantInterface() {
     
     return lines.map((line, idx) => {
       const isBullet = line.trim().startsWith("* ") || line.trim().startsWith("- ");
+      const isH1 = line.trim().startsWith("# ");
+      const isH2 = line.trim().startsWith("## ");
+      const isH3 = line.trim().startsWith("### ");
+      
       let cleanLine = line;
       if (isBullet) {
         cleanLine = line.trim().substring(2);
+      } else if (isH1) {
+        cleanLine = line.trim().substring(2);
+      } else if (isH2) {
+        cleanLine = line.trim().substring(3);
+      } else if (isH3) {
+        cleanLine = line.trim().substring(4);
       }
       
       const parts = [];
@@ -886,6 +914,24 @@ export function AIAssistantInterface() {
           <li key={idx} className="list-disc ml-5 pl-1 mb-1 text-gray-900 dark:text-neutral-200">
             {parts}
           </li>
+        );
+      } else if (isH3) {
+        return (
+          <h3 key={idx} className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mt-4 mb-2">
+            {parts}
+          </h3>
+        );
+      } else if (isH2) {
+        return (
+          <h2 key={idx} className="text-xl font-semibold text-gray-900 dark:text-neutral-100 mt-5 mb-3">
+            {parts}
+          </h2>
+        );
+      } else if (isH1) {
+        return (
+          <h1 key={idx} className="text-2xl font-bold text-gray-900 dark:text-neutral-100 mt-6 mb-4">
+            {parts}
+          </h1>
         );
       }
       
@@ -1377,6 +1423,7 @@ export function AIAssistantInterface() {
                       {/* Edit Button - Visible on mobile, hover-only on desktop */}
                       <button 
                         onClick={() => {
+                          setEditingMessageId(msg.id);
                           setInputValue(msg.text);
                           if (inputRef.current) inputRef.current.focus();
                         }}

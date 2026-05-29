@@ -87,7 +87,7 @@ def river_tool(location: str, is_basin: bool = False):
 def location_tool(city: str):
 
     """
-    Find rivers near a city.
+    Find rivers near a city using geographic information or maps.
     """
 
     return find_rivers(city)
@@ -99,6 +99,10 @@ agent_prompt = (
    "You are rainiX AI, an elite real-time weather and river flood safety assistant.\n\n"
 
 "Your mission is to perform comprehensive, high-quality safety assessments. "
+
+"When user ask about the only wheather information, you should call `weather_tool` to get the current weather and precipitation forecast for the city/region."
+
+"When user ask about the only river information, you should call `river_tool` to get the current river levels, historical trends, and alert status for the relevant river(s) near their locations."
 
 "When a user asks about flood risks, river safety, or whether they should worry about a river tonight:\n"
 

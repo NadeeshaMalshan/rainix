@@ -128,13 +128,25 @@ exports.getCityOverview = async (req, res) => {
                             river.status = "UNKNOWN";
                         }
                     } else {
-                        river.historicalData = [];
+                        if (!river.historicalData) {
+                            river.historicalData = [];
+                        }
                         if (river.status === undefined || river.status === null) {
                             river.status = "UNKNOWN";
                         }
                     }
                 })
             );
+        }
+
+        // If not a full request, remove historical data to save space
+        const isFullRequest = req.query.full === 'true';
+        if (!isFullRequest && rivers && rivers.length > 0) {
+            rivers = rivers.map(r => {
+                const cleanRiver = { ...r };
+                delete cleanRiver.historicalData;
+                return cleanRiver;
+            });
         }
 
         console.log("Fetching radar...");

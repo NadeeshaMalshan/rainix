@@ -58,13 +58,20 @@ const enrichRivers = async (rivers) => {
                     river.status = "UNKNOWN";
                 }
             } else {
-                river.historicalData = [];
+                if (!river.historicalData) {
+                    river.historicalData = [];
+                }
                 if (river.status === undefined || river.status === null) {
                     river.status = "UNKNOWN";
                 }
             }
         })
     );
+
+    const isFullRequest = req && req.query && req.query.full === 'true';
+    if (isFullRequest) {
+        return rivers;
+    }
 
     // AI optimized structure without heavy historicalData array
     return rivers.map(r => {

@@ -31,11 +31,20 @@ exports.getRiversByBasin = async (basinName) => {
       if (!attrs || !attrs.gauge) continue;
 
       if (!uniqueGauges.has(attrs.gauge)) {
-        uniqueGauges.set(attrs.gauge, attrs);
+        uniqueGauges.set(attrs.gauge, { latest: attrs, history: [] });
+      }
+      
+      if (attrs.water_level !== null && attrs.water_level !== undefined && attrs.CreationDate) {
+        uniqueGauges.get(attrs.gauge).history.push({
+          x: new Date(attrs.CreationDate).toISOString(),
+          y: attrs.water_level
+        });
       }
     }
 
-    const transformed = Array.from(uniqueGauges.values()).map(device => {
+    const transformed = Array.from(uniqueGauges.values()).map(deviceData => {
+      const device = deviceData.latest;
+      const history = deviceData.history.reverse();
       const currentLevel = device.water_level;
       
       const alert = device.alertpull;
@@ -79,7 +88,7 @@ exports.getRiversByBasin = async (basinName) => {
         currentLevel: currentLevel,
         rainfall: device.rain_fall !== undefined ? device.rain_fall : null,
         source: "ArcGIS",
-        historicalData: []
+        historicalData: history
       };
     });
 
@@ -109,11 +118,19 @@ exports.getAllRivers = async () => {
       const attrs = feature.attributes;
       if (!attrs || !attrs.gauge) continue;
       if (!uniqueGauges.has(attrs.gauge)) {
-        uniqueGauges.set(attrs.gauge, attrs);
+        uniqueGauges.set(attrs.gauge, { latest: attrs, history: [] });
+      }
+      if (attrs.water_level !== null && attrs.water_level !== undefined && attrs.CreationDate) {
+        uniqueGauges.get(attrs.gauge).history.push({
+          x: new Date(attrs.CreationDate).toISOString(),
+          y: attrs.water_level
+        });
       }
     }
 
-    const transformed = Array.from(uniqueGauges.values()).map(device => {
+    const transformed = Array.from(uniqueGauges.values()).map(deviceData => {
+      const device = deviceData.latest;
+      const history = deviceData.history.reverse();
       const currentLevel = device.water_level;
       const alert = device.alertpull;
       const minor = device.minorpull;
@@ -156,7 +173,7 @@ exports.getAllRivers = async () => {
         currentLevel: currentLevel,
         rainfall: device.rain_fall !== undefined ? device.rain_fall : null,
         source: "ArcGIS",
-        historicalData: []
+        historicalData: history
       };
     });
 
