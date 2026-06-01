@@ -213,6 +213,11 @@ exports.getRiversByLocation = async (location) => {
             if (river.basin && normalizedMappedBasins.some(mappedBasin => normalize(river.basin).includes(mappedBasin))) {
                 return true;
             }
+            
+            // Match basin directly against the search term (e.g. searching for "kalu ganga")
+            if (river.basin && normalize(river.basin) === normSearch) {
+                return true;
+            }
 
             return false;
         });

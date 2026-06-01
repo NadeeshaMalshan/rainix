@@ -5,9 +5,11 @@ const {
   getRiverChartData,
   getAllRivers,
   getAreaRivers,
-  getRegionRivers
+  getRegionRivers,
+  searchRivers
 } = require('../controllers/riverController');
 
+router.get('/search', searchRivers);
 router.get('/chart/:deviceKey', getRiverChartData);
 router.get('/', getAllRivers);
 router.get('/area/:area', getAreaRivers);

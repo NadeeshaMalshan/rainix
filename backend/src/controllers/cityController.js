@@ -64,7 +64,12 @@ exports.getCityOverview = async (req, res) => {
                 weather.country = 'Your Location';
             }
         } else {
-            weather = await fetchWeatherByCity(city);
+            try {
+                weather = await fetchWeatherByCity(city);
+            } catch (weatherErr) {
+                console.error("Weather data not found for:", city);
+                weather = null;
+            }
         }
 
         console.log("Weather OK");

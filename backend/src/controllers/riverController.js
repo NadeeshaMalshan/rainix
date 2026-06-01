@@ -110,6 +110,42 @@ exports.getAllRivers = async (req, res) => {
     }
 };
 
+exports.searchRivers = async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q || q.length < 2) return res.json({ success: true, data: [] });
+        
+        let rivernetData = await getAllRivernetDevices();
+        let arcgisData = await getAllArcgisRivers();
+        let data = mergeRivers(rivernetData, arcgisData);
+        
+        const normQ = normalize(q);
+        const filtered = data.filter(r => (r.name && normalize(r.name).includes(normQ)) || (r.city && normalize(r.city).includes(normQ)));
+        
+        // Remove duplicates by name
+        const unique = [];
+        const seen = new Set();
+        for (const r of filtered) {
+            const normName = normalize(r.name);
+            if (!seen.has(normName)) {
+                seen.add(normName);
+                unique.push({ name: r.name, city: r.city || '', country: 'Sri Lanka', isRiver: true });
+            }
+        }
+        
+        res.status(200).json({
+            success: true,
+            data: unique.slice(0, 5)
+        });
+    } catch (error) {
+        console.error('Error searching rivers:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to search rivers'
+        });
+    }
+};
+
 exports.getAreaRivers = async (req, res) => {
     try {
         const { area } = req.params;
