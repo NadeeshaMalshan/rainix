@@ -21,6 +21,8 @@ export default function WeatherDashboard() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
+  const [showStickyNav, setShowStickyNav] = useState(false);
+  const locationRef = useRef(null);
   const [savedLocationsWeather, setSavedLocationsWeather] = useState({
     'Tokyo, JP': { temp: '19°', status: 'Clear Conditions', style: 'sunny' },
     'Sydney, AU': { temp: '22°', status: 'Partly Cloudy', style: 'partly_cloudy_day' }
@@ -166,6 +168,18 @@ export default function WeatherDashboard() {
     };
 
     fetchSavedLocationsWeather();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (locationRef.current) {
+        const rect = locationRef.current.getBoundingClientRect();
+        // Show sticky nav when the location section is scrolled near out of view
+        setShowStickyNav(rect.bottom < 80);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleSearchSubmit = (query) => {
@@ -370,10 +384,45 @@ export default function WeatherDashboard() {
     // Component is now fully CSS animated, no GSAP JS loops needed!
     // We only keep the timer cleanup just in case, though it's no longer used.
     return () => {};
-  }, [weatherState, cityData, isLoading, errorMsg]);
-
-  return (
+  }, [weatherState, cityData, isLoading, errorMsg]);  return (
     <div className="min-h-screen relative overflow-hidden font-sans text-white transition-all duration-1000 ease-in-out">
+      
+      {/* Sticky Navigation Bar */}
+      <div className={`fixed top-0 left-0 right-0 z-[100] transition-transform duration-300 ${showStickyNav ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className="deep-frosted-pill mx-2 md:mx-6 mt-2 p-2 px-4 rounded-2xl shadow-glass flex items-center justify-between gap-4">
+          <div className={`flex items-center gap-3 ${textColorClass}`}>
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 shadow-inner">
+              <span className="material-symbols-outlined text-2xl">{weatherCondition.icon}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl md:text-2xl font-bold leading-tight">{Math.round(currentTemp)}°</span>
+            </div>
+            <div className="hidden sm:flex flex-col ml-1 border-l border-white/20 pl-4">
+              <span className="text-sm md:text-base font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-[200px]">{formattedCity}</span>
+              <span className="text-[10px] md:text-xs opacity-70 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-[200px]">{formattedCountry}</span>
+            </div>
+          </div>
+          <div className="flex-1 max-w-sm ml-auto relative">
+            <div className="deep-frosted-pill w-full h-10 md:h-11 rounded-full flex items-center px-3 hover:bg-white/25 focus-within:bg-white/25 focus-within:ring-1 ring-white/30 transition-all">
+              <input 
+                className={`flex-1 min-w-0 bg-transparent border-none text-sm md:text-base ${textColorClass} placeholder:${textColorClass} placeholder:opacity-60 outline-none`}
+                placeholder="Search..." 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(searchQuery); }}
+              />
+              <button 
+                onClick={() => handleSearchSubmit(searchQuery)}
+                className={`p-1 md:p-1.5 rounded-full hover:bg-white/30 transition-colors ${textColorClass} flex items-center justify-center`}
+              >
+                <span className="material-symbols-outlined text-lg md:text-xl">search</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Head>
         <title>Weather Dashboard: {formattedCity}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -678,7 +727,7 @@ export default function WeatherDashboard() {
               }
             `}</style>
 
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center" ref={locationRef}>
               <h1 className={`text-2xl xs:text-3xl md:text-4xl font-normal tracking-tight ${textColorClass} mb-1 drop-shadow-md`}>
                 {formattedCity}
               </h1>

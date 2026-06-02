@@ -3,7 +3,6 @@ import React, { useRef, useEffect, useState } from 'react';
 const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
   const scrollRefLeft = useRef(null);
   const scrollRefRight = useRef(null);
-  const [points, setPoints] = useState([]);
   
   // Get next 24 hours (or what's available up to 24)
   const next24 = hourlyData ? hourlyData.slice(0, 24) : [];
@@ -31,22 +30,9 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
     return 'cloud';
   };
 
-  // Calculate SVG line points for temperature
-  useEffect(() => {
-    if (next24.length === 0) return;
-    const minTemp = Math.min(...next24.map(h => h.temperature));
-    const maxTemp = Math.max(...next24.map(h => h.temperature));
-    const range = maxTemp - minTemp || 1;
-    
-    // SVG width: each hour is 100px wide
-    const newPoints = next24.map((h, i) => {
-      const x = i * 100 + 50;
-      // y goes from 10 to 50 (40px height)
-      const y = 50 - ((h.temperature - minTemp) / range) * 40;
-      return { x, y, temp: h.temperature };
-    });
-    setPoints(newPoints);
-  }, [next24]);
+  const minTemp = Math.min(...next24.map(h => h.temperature));
+  const maxTemp = Math.max(...next24.map(h => h.temperature));
+  const range = maxTemp - minTemp || 1;
 
   if (!hourlyData || hourlyData.length === 0) return null;
 
@@ -64,25 +50,31 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
             24-Hour Forecast
           </h3>
           <div className="relative flex-1 w-full overflow-x-auto hide-scrollbar" ref={scrollRefLeft}>
-            <div className="flex flex-row items-stretch h-full min-w-max pb-2 relative" style={{ width: `${next24.length * 100}px` }}>
+            <div className="flex flex-row items-stretch h-full w-max pb-2 relative">
               
               {/* SVG Line for temperatures */}
-              {points.length > 0 && (
-                <svg className="absolute bottom-8 left-0 h-16 pointer-events-none z-0" style={{ width: `${next24.length * 100}px` }}>
-                  <polyline
-                    fill="none"
-                    stroke="rgba(255, 255, 255, 0.5)"
-                    strokeWidth="2"
-                    points={points.map(p => `${p.x},${p.y}`).join(' ')}
-                  />
-                  {points.map((p, i) => (
-                    <circle key={i} cx={p.x} cy={p.y} r="4" fill="white" />
-                  ))}
+              {next24.length > 0 && (
+                <svg className="absolute bottom-8 left-0 w-full h-16 pointer-events-none z-0">
+                  {next24.map((h, i) => {
+                    const xCenter = `${(i + 0.5) * (100 / next24.length)}%`;
+                    const yCenter = 50 - ((h.temperature - minTemp) / range) * 40;
+                    const prev = i > 0 ? next24[i - 1] : null;
+                    const prevY = prev ? 50 - ((prev.temperature - minTemp) / range) * 40 : yCenter;
+                    const prevX = prev ? `${(i - 0.5) * (100 / next24.length)}%` : xCenter;
+                    return (
+                      <g key={`svg-${i}`}>
+                        {i > 0 && (
+                          <line x1={prevX} y1={prevY} x2={xCenter} y2={yCenter} stroke="rgba(255, 255, 255, 0.5)" strokeWidth="2" />
+                        )}
+                        <circle cx={xCenter} cy={yCenter} r="4" fill="white" />
+                      </g>
+                    );
+                  })}
                 </svg>
               )}
 
               {next24.map((h, idx) => (
-                <div key={idx} className="w-[100px] flex flex-col items-center h-full relative z-10 shrink-0">
+                <div key={idx} className="w-[calc((100vw-48px)/4)] md:w-[100px] flex flex-col items-center h-full relative z-10 shrink-0">
                   <span className="text-[10px] md:text-xs text-white/70 mt-1 mb-1">{formatTime(h.time)}</span>
                   <span className="material-symbols-outlined text-2xl text-white my-1 drop-shadow-md">
                     {getWeatherIcon(h.weatherCode)}

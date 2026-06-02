@@ -31,9 +31,9 @@ const DailyForecast = ({ dailyData }) => {
           14-Day Forecast
         </h3>
         <div className="relative flex-1 w-full overflow-x-auto hide-scrollbar" ref={scrollRef}>
-          <div className="flex flex-row items-center h-full min-w-max pb-2 gap-4 md:gap-6">
+          <div className="flex flex-row items-center h-full w-max pb-2">
             {dailyData.map((d, idx) => (
-              <div key={idx} className="w-[100px] flex flex-col items-center justify-between h-full relative z-10 shrink-0 py-2">
+              <div key={idx} className="w-[calc((100vw-48px)/4)] md:w-[100px] flex flex-col items-center justify-between h-full relative z-10 shrink-0 py-2">
                 <span className="text-[10px] md:text-xs text-white/70 mt-1 mb-1">
                   {idx === 0 ? 'Today' : formatDate(d.date).split(',')[0]}
                 </span>
