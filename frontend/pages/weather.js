@@ -5,6 +5,8 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { PromptInputBasic } from '../components/ui/prompt-input-demo';
 import LiquidGlassText2D from '../components/LiquidGlassText2D';
+import HourlyForecast from '../components/HourlyForecast';
+import DailyForecast from '../components/DailyForecast';
 
 export default function WeatherDashboard() {
   const router = useRouter();
@@ -697,19 +699,31 @@ export default function WeatherDashboard() {
                 </div>
               </div>
 
-              
-
-              {/* AI Assistant Input */}
-              <div className="w-full mt-4 md:mt-6 px-2 md:px-4 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-                <PromptInputBasic />
-              </div>
-
               {hasActiveWarning && (
                 <div className="w-full flex items-center justify-center gap-2 mt-3 md:mt-5 text-xs md:text-base font-normal select-none pointer-events-auto px-2">
                   <span className="material-symbols-outlined text-xl">{alertIcon}</span>
                   <span>{alertTitle}: {alertDesc}</span>
                 </div>
               )}
+
+               {/* AI Assistant Input */}
+              <div className="w-full mt-4 md:mt-6 px-2 md:px-4 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                <PromptInputBasic />
+              </div>
+
+              {/* 24 Hours Weather Section */}
+              <div className="w-full animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                <HourlyForecast hourlyData={weather?.hourly} />
+              </div>
+
+              {/* 14 Days Weather Section */}
+              <div className="w-full animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <DailyForecast dailyData={weather?.forecast14Days} />
+              </div>
+
+             
+
+              
             </div>
           </div>
         )}

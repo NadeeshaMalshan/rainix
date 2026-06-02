@@ -55,7 +55,7 @@ exports.fetchWeatherData = async (latitude, longitude) => {
           weatherCode: hourly.weather_code[idx],
           windSpeed: hourly.wind_speed_10m[idx],
           windDirection: hourly.wind_direction_10m[idx],
-        })).slice(0, 24),
+        })).slice(hourlyIndex !== -1 ? hourlyIndex : 0, (hourlyIndex !== -1 ? hourlyIndex : 0) + 24),
 
         // Daily: 14 days forecast
         forecast14Days: daily.time.map((timeStr, idx) => ({
