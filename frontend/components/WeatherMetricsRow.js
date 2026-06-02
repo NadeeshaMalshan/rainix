@@ -102,9 +102,9 @@ const WeatherMetricsRow = ({ weather }) => {
             <span className="material-symbols-outlined text-lg">compress</span> Pressure
           </h3>
           <div className="flex-1 flex items-center justify-center relative mt-4">
-            <div className="relative w-48 h-24 overflow-hidden flex items-end justify-center">
+            <div className="relative w-56 h-28 overflow-hidden flex items-end justify-center">
               {/* Semi-circle Gauge */}
-              <svg className="absolute top-0 w-full h-48 transform rotate-180" viewBox="0 0 100 100">
+              <svg className="absolute top-0 w-full h-56 transform rotate-180" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="6" strokeDasharray={`${pressureCircumference} ${pressureCircumference}`} strokeDashoffset="0" />
                 <circle 
                   cx="50" 
@@ -121,9 +121,9 @@ const WeatherMetricsRow = ({ weather }) => {
               </svg>
               
               {/* Center Text */}
-              <div className="flex flex-col items-center justify-center mb-2">
-                <span className="text-3xl font-bold text-white drop-shadow-md">{(pressureVal || 0).toFixed(1)}</span>
-                <span className="text-sm font-medium text-white/60">mb</span>
+              <div className="flex flex-col items-center justify-center mb-1">
+                <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-md">{(pressureVal || 0).toFixed(1)}</span>
+                <span className="text-xs md:text-sm font-medium text-white/60">mb</span>
               </div>
             </div>
           </div>
@@ -173,9 +173,9 @@ const WeatherMetricsRow = ({ weather }) => {
             <span className="material-symbols-outlined text-lg">light_mode</span> UV Index
           </h3>
           <div className="flex-1 flex items-center justify-center relative mt-4">
-            <div className="relative w-48 h-24 overflow-hidden flex items-end justify-center">
+            <div className="relative w-56 h-28 overflow-hidden flex items-end justify-center">
               {/* Semi-circle Gauge */}
-              <svg className="absolute top-0 w-full h-48 transform rotate-180" viewBox="0 0 100 100">
+              <svg className="absolute top-0 w-full h-56 transform rotate-180" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" strokeDasharray={`${pressureCircumference} ${pressureCircumference}`} strokeDashoffset="0" />
                 <circle 
                   cx="50" 
