@@ -7,6 +7,7 @@ import { PromptInputBasic } from '../components/ui/prompt-input-demo';
 import LiquidGlassText2D from '../components/LiquidGlassText2D';
 import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
+import WeatherMetricsRow from '../components/WeatherMetricsRow';
 
 export default function WeatherDashboard() {
   const router = useRouter();
@@ -721,7 +722,10 @@ export default function WeatherDashboard() {
                 <DailyForecast dailyData={weather?.forecast14Days} />
               </div>
 
-             
+              {/* Weather Metrics Section */}
+              <div className="w-full animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                <WeatherMetricsRow weather={weather} />
+              </div>
 
               
             </div>

@@ -27,7 +27,7 @@ const DailyForecast = ({ dailyData }) => {
     <div className="w-full max-w-[1600px] w-[95vw] mx-auto mt-6 px-2 md:px-6">
       <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 shadow-glass flex flex-col min-w-0">
         <h3 className="text-white/80 font-medium flex items-center gap-2 mb-4">
-          <span className="material-symbols-outlined text-blue-300">calendar_month</span>
+         
           14-Day Forecast
         </h3>
         <div className="relative flex-1 w-full overflow-x-auto hide-scrollbar" ref={scrollRef}>
@@ -44,10 +44,7 @@ const DailyForecast = ({ dailyData }) => {
                 
                 <div className="flex flex-col items-center w-full my-2">
                   <span className="text-lg md:text-xl font-semibold text-white drop-shadow-md">
-                    {Math.round(d.high)}°
-                  </span>
-                  <span className="text-xs md:text-sm text-white/60 font-medium mt-1">
-                    {Math.round(d.low)}°
+                    {Math.round(d.avg)}°
                   </span>
                 </div>
 

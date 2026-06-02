@@ -7,13 +7,18 @@ const axios = require("axios");
 exports.fetchWeatherData = async (latitude, longitude) => {
   try {
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-      `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,wind_direction_10m,visibility` +
+      `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,wind_direction_10m,visibility,surface_pressure` +
       `&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m` +
-      `&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,precipitation_probability_max,weather_code` +
+      `&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,precipitation_probability_max,weather_code,uv_index_max` +
       `&timezone=auto&forecast_days=14`;
 
     const weatherResponse = await axios.get(weatherUrl);
     const { current, hourly, daily } = weatherResponse.data;
+
+    // Fetch AQI and Pollen
+    const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=us_aqi,alder_pollen,birch_pollen,grass_pollen,ragweed_pollen,olive_pollen,mugwort_pollen`;
+    const aqiResponse = await axios.get(aqiUrl).catch(() => ({ data: {} }));
+    const aqiData = aqiResponse.data.current || {};
 
     // Calculate current hour's precipitation probability from hourly data
     const currentHourStr = current.time.slice(0, 13) + ":00";
@@ -36,6 +41,14 @@ exports.fetchWeatherData = async (latitude, longitude) => {
         windDirection: current.wind_direction_10m,
         visibility: current.visibility,
         weatherCode: current.weather_code,
+        pressure: current.surface_pressure,
+        uvIndex: daily.uv_index_max ? daily.uv_index_max[0] : 0,
+        aqi: aqiData.us_aqi || 0,
+        pollen: {
+          tree: Math.max(aqiData.alder_pollen || 0, aqiData.birch_pollen || 0, aqiData.olive_pollen || 0),
+          grass: aqiData.grass_pollen || 0,
+          ragweed: Math.max(aqiData.ragweed_pollen || 0, aqiData.mugwort_pollen || 0)
+        },
         time: current.time,
 
         // Today's boundaries and solar details
@@ -62,6 +75,7 @@ exports.fetchWeatherData = async (latitude, longitude) => {
           date: timeStr,
           high: daily.temperature_2m_max[idx],
           low: daily.temperature_2m_min[idx],
+          avg: daily.temperature_2m_mean ? daily.temperature_2m_mean[idx] : (daily.temperature_2m_max[idx] + daily.temperature_2m_min[idx]) / 2,
           feelsLikeMax: daily.apparent_temperature_max[idx],
           feelsLikeMin: daily.apparent_temperature_min[idx],
           sunrise: daily.sunrise[idx],

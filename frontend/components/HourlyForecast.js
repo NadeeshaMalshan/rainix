@@ -110,7 +110,7 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
         <div className="deep-frosted-pill rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-white/80 font-medium flex items-center gap-2">
-              <span className="material-symbols-outlined text-blue-300">water_drop</span>
+             
               Expected Rainfall
             </h3>
             <span className="text-[10px] text-white/60 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
@@ -134,7 +134,7 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
                     <span className="text-[10px] md:text-xs text-white/70 absolute top-0">{formatTime(h.time)}</span>
                     
                     {/* Bar */}
-                    <div className="w-8 md:w-10 flex items-end justify-center h-24 mb-2 relative">
+                    <div className="w-8 md:w-10 flex items-end justify-center h-24 mb-1 relative">
                       <div 
                         className="w-full bg-gradient-to-t from-blue-500/80 to-cyan-300/80 rounded-t-sm shadow-[0_0_8px_rgba(56,189,248,0.4)] transition-all duration-300 group-hover:opacity-100 opacity-90"
                         style={{ height: `${Math.max(heightPercentage, 2)}%` }} // Ensure visible even for 0
@@ -145,7 +145,7 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
                     </div>
                     
                     {/* MM Value */}
-                    <span className="text-[10px] md:text-xs text-white font-medium drop-shadow-md absolute -bottom-1">
+                    <span className="text-[10px] md:text-xs text-white font-medium drop-shadow-md mt-1">
                       {h.precipitation > 0 ? h.precipitation.toFixed(2) : '0.00'}
                     </span>
                   </div>
