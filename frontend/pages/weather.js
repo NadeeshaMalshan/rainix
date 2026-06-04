@@ -171,16 +171,16 @@ export default function WeatherDashboard() {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (locationRef.current) {
-        const rect = locationRef.current.getBoundingClientRect();
-        // Show sticky nav when the location section is scrolled near out of view
-        setShowStickyNav(rect.bottom < 80);
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    if (!locationRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setShowStickyNav(!entries[0].isIntersecting);
+      },
+      { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
+    );
+    observer.observe(locationRef.current);
+    return () => observer.disconnect();
+  }, [isLoading, cityData]);
 
   const handleSearchSubmit = (query) => {
     if (query && query.trim()) {
