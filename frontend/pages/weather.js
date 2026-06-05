@@ -8,6 +8,10 @@ import LiquidGlassText2D from '../components/LiquidGlassText2D';
 import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
 import WeatherMetricsRow from '../components/WeatherMetricsRow';
+import RiverGaugeChart from '../components/RiverGaugeChart';
+import SunMoonCards from '../components/SunMoonCards';
+import MapWrapper from '../components/MapWrapper';
+import LoadingScreen from '../components/LoadingScreen';
 
 export default function WeatherDashboard() {
   const router = useRouter();
@@ -50,9 +54,9 @@ export default function WeatherDashboard() {
       }
 
       const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
-      let url = `${nodeApiUrl}/api/city/${encodeURIComponent(resolvedCity)}`;
+      let url = `${nodeApiUrl}/api/city/${encodeURIComponent(resolvedCity)}?full=true`;
       if (targetLat && targetLon) {
-        url += `?lat=${targetLat}&lon=${targetLon}`;
+        url += `&lat=${targetLat}&lon=${targetLon}`;
       }
       const res = await fetch(url);
       const result = await res.json();
@@ -324,7 +328,7 @@ export default function WeatherDashboard() {
     progress = Math.max(0, Math.min(1, progress));
     const angle = Math.PI * (1 - progress); 
     const x = 50 + 40 * Math.cos(angle);
-    const y = 70 - 45 * Math.sin(angle);
+    const y = 40 - 25 * Math.sin(angle); // Keeps it higher up in the top half
     return { isNight, x, y };
   };
 
@@ -361,15 +365,15 @@ export default function WeatherDashboard() {
 
   const getBackgroundGradient = (state) => {
     switch (state) {
-      case 'sunny': return 'linear-gradient(180deg, #3A82F6 0%, #89CFF0 100%)'; // Deeper blue for better white contrast
-      case 'partly_cloudy_day': return 'linear-gradient(180deg, #5B9DD9 0%, #AECBEB 100%)';
-      case 'cloudy': return 'linear-gradient(180deg, #78909C 0%, #B0BEC5 100%)';
-      case 'rainy': return 'linear-gradient(180deg, #455A64 0%, #78909C 100%)';
-      case 'thunderstorm': return 'linear-gradient(180deg, #263238 0%, #37474F 100%)';
-      case 'snow': return 'linear-gradient(180deg, #90A4AE 0%, #CFD8DC 100%)';
-      case 'clear_night': return 'linear-gradient(180deg, #0A192F 0%, #112240 100%)';
-      case 'partly_cloudy_night': return 'linear-gradient(180deg, #112240 0%, #1A365D 100%)';
-      default: return 'linear-gradient(180deg, #3A82F6 0%, #89CFF0 100%)';
+      case 'sunny': return 'linear-gradient(180deg, #1E3A8A 0%, #2563EB 100%)'; 
+      case 'partly_cloudy_day': return 'linear-gradient(180deg, #1E3A8A 0%, #334155 100%)';
+      case 'cloudy': return 'linear-gradient(180deg, #334155 0%, #475569 100%)';
+      case 'rainy': return 'linear-gradient(180deg, #1E293B 0%, #334155 100%)';
+      case 'thunderstorm': return 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)';
+      case 'snow': return 'linear-gradient(180deg, #475569 0%, #64748B 100%)';
+      case 'clear_night': return 'linear-gradient(180deg, #020617 0%, #0F172A 100%)';
+      case 'partly_cloudy_night': return 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)';
+      default: return 'linear-gradient(180deg, #1E3A8A 0%, #2563EB 100%)';
     }
   };
 
@@ -619,6 +623,12 @@ export default function WeatherDashboard() {
         .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         .animate-pop-in { animation: pop-in 1.5s cubic-bezier(0.68, -0.55, 0.26, 1.55) forwards; }
         .animate-lightning { animation: lightning-flash 5s infinite; pointer-events: none; }
+        
+        @keyframes page-slide-up {
+          0% { transform: translateY(100vh); }
+          100% { transform: translateY(0); }
+        }
+        .animate-page-slide-up { animation: page-slide-up 1s cubic-bezier(0.7,0,0.3,1) forwards; }
       `}</style>
 
       <style dangerouslySetInnerHTML={{ __html: `
@@ -665,7 +675,7 @@ export default function WeatherDashboard() {
       `}} />
 
       <div 
-        className={`font-poppins overflow-x-hidden overflow-y-auto w-full max-w-full min-h-screen relative flex flex-col justify-between select-none transition-all duration-1000 pb-12 ${textColorClass}`}
+        className={`font-poppins overflow-x-hidden overflow-y-auto custom-scrollbar w-full max-w-full min-h-screen relative flex flex-col justify-between select-none transition-all duration-1000 pb-12 ${textColorClass}`}
         style={{ background: getBackgroundGradient(weatherState) }}
       >
         {weatherState === 'thunderstorm' && <div className="lightning-overlay animate-lightning bg-white absolute inset-0 z-40" />}
@@ -677,7 +687,7 @@ export default function WeatherDashboard() {
           </div>
         )}
 
-        <div ref={celestialRef} className={`absolute z-10 pointer-events-none animate-pop-in ${['cloudy', 'thunderstorm', 'rainy', 'snow'].includes(weatherState) ? 'hidden' : ''}`} style={{ left: `${orbit.x}%`, top: `${orbit.y}%` }}>
+        <div ref={celestialRef} className={`absolute z-10 pointer-events-none animate-pop-in ${isLoading || ['cloudy', 'thunderstorm', 'rainy', 'snow'].includes(weatherState) ? 'hidden' : ''}`} style={{ left: `${orbit.x}%`, top: `${orbit.y}%` }}>
           {orbit.isNight ? (
             <img src="/images/moon.png" alt="Moon" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
           ) : (
@@ -824,6 +834,8 @@ export default function WeatherDashboard() {
           </div>
         </div>
 
+        <LoadingScreen isVisible={isLoading} text={`Getting weather data of ${formattedCity}`} />
+
         {!isLoading && !errorMsg && cityData && (
           <div className="flex-1 flex flex-col justify-center items-center w-full min-h-full relative z-40 main-weather-content pt-20 md:pt-24 pb-8">
             <svg className="absolute w-0 h-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -865,6 +877,7 @@ export default function WeatherDashboard() {
                   <span className="flex items-center gap-0.5"><span className="material-symbols-outlined text-xl">thermostat</span>{Math.round(weather?.feelsLike || currentTemp)}</span>
                   <span className="flex items-center gap-0.5"><span className="material-symbols-outlined text-xl">eco</span>{aqiText}</span>
                   <span className="flex items-center gap-0.5"><span className="material-symbols-outlined text-xl">water_drop</span>{weather?.precipitationProbability || 0}%</span>
+                  <span className="flex items-center gap-0.5"><span className="material-symbols-outlined text-xl">humidity_percentage</span>{weather?.humidity || 0}%</span>
                 </div>
               </div>
 
@@ -893,6 +906,9 @@ export default function WeatherDashboard() {
               {/* Weather Metrics Section */}
               <div className="w-full">
                 <WeatherMetricsRow weather={weather} />
+                <SunMoonCards weather={weather} />
+                {rivers.length > 0 && <RiverGaugeChart activeRiver={rivers[0]} />}
+                <MapWrapper coordinates={cityData?.weather?.coordinates} radarUrl={cityData?.radar?.tileUrl} />
               </div>
 
               

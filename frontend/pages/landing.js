@@ -377,7 +377,7 @@ export default function Landing() {
 
       {/* Main Background */}
       <div 
-        className="font-poppins w-full max-w-full min-h-screen relative flex flex-col justify-between overflow-x-hidden overflow-y-auto pb-12 transition-all duration-1000"
+        className="font-poppins w-full max-w-full min-h-screen relative flex flex-col justify-between overflow-x-hidden overflow-y-auto custom-scrollbar pb-12 transition-all duration-1000"
         style={{ background: isNight ? nightGradient : dayGradient }}
       >
         {/* Twinkling Stars (Night-only) */}
@@ -582,6 +582,8 @@ export default function Landing() {
         {/* Bottom Landscape Ground (Responsive scaling for small landscape overlays) */}
        
       </div>
+
+  
     </div>
   );
 }

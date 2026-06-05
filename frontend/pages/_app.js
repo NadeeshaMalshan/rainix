@@ -1,9 +1,14 @@
 import Head from 'next/head';
+import { useRouter } from 'next/router';
+import Footer from '../components/Footer';
 import './main.css';
 import '../styles/globals.css';
 import 'leaflet/dist/leaflet.css';
 
 export default function App({ Component, pageProps }) {
+  const router = useRouter();
+  const hideFooter = router.pathname === '/ai';
+
   return (
     <>
       <Head>
@@ -114,7 +119,12 @@ export default function App({ Component, pageProps }) {
           `
         }} />
       </Head>
-      <Component {...pageProps} />
-    </>
+    <div className="flex flex-col min-h-screen">
+      <main className="flex-1">
+        <Component {...pageProps} />
+      </main>
+      {!hideFooter && <Footer />}
+    </div>
+  </>
   );
 }

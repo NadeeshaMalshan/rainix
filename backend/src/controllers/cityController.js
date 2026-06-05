@@ -146,7 +146,7 @@ exports.getCityOverview = async (req, res) => {
             const latestFrame = radarData.radar.past[radarData.radar.past.length - 1];
             radar = {
                 generated: radarData.generated,
-                tileUrl: `${radarData.host}/v2/radar/${latestFrame.time}/256/{z}/{x}/{y}/2/1_1.png`,
+                tileUrl: `${radarData.host}${latestFrame.path}/256/{z}/{x}/{y}/2/1_1.png`,
                 latestFrame: latestFrame.time
             };
             console.log("Radar OK");

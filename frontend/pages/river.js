@@ -7,6 +7,7 @@ import { PromptInputBasic } from '../components/ui/prompt-input-demo';
 import LiquidGlassText2D from '../components/LiquidGlassText2D';
 import StationsMap from '../components/StationsMap';
 import StationWeatherCard from '../components/StationWeatherCard';
+import LoadingScreen from '../components/LoadingScreen';
 
 export default function RiverDashboard() {
   const router = useRouter();
@@ -425,6 +426,12 @@ export default function RiverDashboard() {
         @keyframes bubble-sway-real { 0% { transform: translateX(0); } 100% { transform: translateX(var(--sway-amount)); } }
         
         .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+
+        @keyframes page-slide-up {
+          0% { transform: translateY(100vh); }
+          100% { transform: translateY(0); }
+        }
+        .animate-page-slide-up { animation: page-slide-up 1s cubic-bezier(0.7,0,0.3,1) forwards; }
       `}</style>
 
       <style dangerouslySetInnerHTML={{ __html: `
@@ -468,7 +475,7 @@ export default function RiverDashboard() {
       `}} />
 
       <div 
-        className={`font-poppins overflow-x-hidden overflow-y-auto w-full max-w-full min-h-screen relative flex flex-col justify-between select-none transition-all duration-1000 pb-12 ${textColorClass}`}
+        className={`font-poppins overflow-x-hidden overflow-y-auto custom-scrollbar w-full max-w-full min-h-screen relative flex flex-col justify-between select-none transition-all duration-1000 pb-12 ${textColorClass}`}
         style={{ background: getBackgroundGradient(riverState) }}
       >
         {/* Underwater Light Rays */}
@@ -600,6 +607,8 @@ export default function RiverDashboard() {
             </button>
           </div>
         </div>
+
+        <LoadingScreen isVisible={isLoading} text={`Getting river data of ${formattedCity}`} />
 
         {!isLoading && !errorMsg && cityData && (
           <div className="flex-1 flex flex-col justify-center items-center w-full min-h-full relative z-40 main-weather-content pt-20 md:pt-24 pb-8">

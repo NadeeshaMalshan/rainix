@@ -1,4 +1,5 @@
 const axios = require("axios");
+const SunCalc = require("suncalc");
 
 /**
  * Fetches rich, comprehensive weather forecast telemetry for specific coordinates.
@@ -24,6 +25,19 @@ exports.fetchWeatherData = async (latitude, longitude) => {
     const currentHourStr = current.time.slice(0, 13) + ":00";
     const hourlyIndex = hourly.time.findIndex(t => t.startsWith(currentHourStr.slice(0, 13)));
     const currentPrecipitationProbability = hourlyIndex !== -1 ? hourly.precipitation_probability[hourlyIndex] : 0;
+
+    // Calculate moon details
+    const moonIllumination = SunCalc.getMoonIllumination(new Date());
+    const moonTimes = SunCalc.getMoonTimes(new Date(), parseFloat(latitude), parseFloat(longitude));
+    let moonPhaseName = "New Moon";
+    const p = moonIllumination.phase;
+    if (p > 0 && p < 0.25) moonPhaseName = "Waxing crescent";
+    else if (Math.abs(p - 0.25) < 0.02) moonPhaseName = "First quarter";
+    else if (p > 0.25 && p < 0.5) moonPhaseName = "Waxing gibbous";
+    else if (Math.abs(p - 0.5) < 0.02) moonPhaseName = "Full moon";
+    else if (p > 0.5 && p < 0.75) moonPhaseName = "Waning gibbous";
+    else if (Math.abs(p - 0.75) < 0.02) moonPhaseName = "Last quarter";
+    else if (p > 0.75 && p < 1) moonPhaseName = "Waning crescent";
 
     return {
       coordinates: {
@@ -56,6 +70,10 @@ exports.fetchWeatherData = async (latitude, longitude) => {
         low: daily.temperature_2m_min[0],
         sunrise: daily.sunrise[0],
         sunset: daily.sunset[0],
+        moonPhase: p,
+        moonPhaseName,
+        moonrise: moonTimes.rise ? moonTimes.rise.toISOString() : null,
+        moonset: moonTimes.set ? moonTimes.set.toISOString() : null,
 
         // Hourly: Next 24 hours
         hourly: hourly.time.map((timeStr, idx) => ({

@@ -3,7 +3,7 @@ import React from 'react';
 const WeatherMetricsRow = ({ weather }) => {
   if (!weather) return null;
 
-  const { windSpeed, windDirection, pressure, aqi, pollen, uvIndex } = weather;
+  const { windSpeed, windDirection, pressure, aqi, pollen, uvIndex, visibility } = weather;
 
   // 1. Wind gauge properties
   // Rotate the arrow according to the wind direction.
@@ -167,35 +167,40 @@ const WeatherMetricsRow = ({ weather }) => {
           </div>
         </div>
 
-        {/* UV INDEX */}
+        {/* UV INDEX & VISIBILITY */}
         <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72" style={{ animationDelay: '0.4s' }}>
           <h3 className="text-white/80 font-medium flex items-center gap-2 mb-4">
-            <span className="material-symbols-outlined text-lg">light_mode</span> UV Index
+            <span className="material-symbols-outlined text-lg">light_mode</span> Max UV Index
           </h3>
-          <div className="flex-1 flex items-center justify-center relative mt-4">
-            <div className="relative w-56 h-28 overflow-hidden flex items-end justify-center">
-              {/* Semi-circle Gauge */}
-              <svg className="absolute top-0 w-full h-56 transform rotate-180" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" strokeDasharray={`${pressureCircumference} ${pressureCircumference}`} strokeDashoffset="0" />
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="45" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="8" 
-                  strokeDasharray={`${pressureCircumference} ${pressureCircumference}`} 
-                  strokeDashoffset={uvOffset} 
-                  strokeLinecap="round"
-                  className={`transition-all duration-1000 ease-out ${uvColor}`}
-                />
-              </svg>
-              
-              {/* Center Text */}
-              <div className="flex flex-col items-center justify-center mb-2">
-                <span className="text-4xl font-bold text-white drop-shadow-md">{uvVal}</span>
-                <span className={`text-sm font-semibold mt-1 ${uvColor}`}>{uvLabel}</span>
+          
+          <div className="flex flex-col flex-1">
+            <div className="mb-4 mt-2">
+              <span className="text-4xl font-bold text-white drop-shadow-md">{uvLabel}</span>
+            </div>
+            
+            <div className="relative w-full h-3 rounded-full bg-gradient-to-r from-green-400 via-yellow-400 via-orange-500 to-purple-500 mt-4">
+              <div 
+                className={`absolute top-1/2 -translate-y-1/2 -ml-3 w-6 h-6 rounded-full border-[2px] border-white flex items-center justify-center shadow-lg transition-all duration-1000 ease-out ${uvColor.replace('text-', 'bg-')}`} 
+                style={{ left: `${uvPercent}%` }}
+              >
+                <span className="text-[10px] font-bold text-white drop-shadow-md leading-none">{Math.round(uvVal)}</span>
               </div>
+            </div>
+            <div className="flex justify-between w-full mt-2">
+               <span className="text-[10px] text-white/50 font-bold">0</span>
+               <span className="text-[10px] text-white/50 font-bold">11+</span>
+            </div>
+          </div>
+
+          {/* VISIBILITY */}
+          <div className="mt-auto pt-4 border-t border-white/10 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-white/60 text-xl">visibility</span>
+              <span className="text-white/80 font-medium">Visibility</span>
+            </div>
+            <div className="text-right">
+              <span className="text-xl font-bold text-white">{visibility ? (visibility / 1000).toFixed(1) : '--'}</span>
+              <span className="text-sm text-white/60 ml-1">km</span>
             </div>
           </div>
         </div>

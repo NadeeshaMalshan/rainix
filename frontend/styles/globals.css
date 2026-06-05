@@ -119,48 +119,46 @@ body {
   transform-box: fill-box;
 }
 
-/* Sleek, Modern Custom Scrollbars (Webkit) */
-::-webkit-scrollbar {
+/* Aggressive Global Custom Scrollbar Override */
+*::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-/* Track */
-::-webkit-scrollbar-track {
-  background: transparent;
+*::-webkit-scrollbar-track {
+  background: #050b14; /* Deep dark blue track to match the UI */
 }
 
-/* Handle */
-::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.18);
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background-color 0.2s ease-in-out;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.4);
-  border: 2px solid transparent;
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  border: 2px solid #050b14;
   background-clip: padding-box;
 }
 
-/* Dark mode specific override */
-.dark *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
 }
 
-.dark *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-/* Firefox Custom Scrollbar Support */
+/* Firefox Support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.18) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.3) #050b14;
+}
+
+/* Exclude AI Page */
+.ai-page *::-webkit-scrollbar {
+  width: auto;
+}
+.ai-page *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ai-page * {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+
+/* Hide footer during loading screen */
+body.loading-active footer {
+  display: none !important;
 }

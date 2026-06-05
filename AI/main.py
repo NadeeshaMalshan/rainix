@@ -344,7 +344,7 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                 return
             except Exception as e:
                 errors[prov_display] = str(e)
-                yield "event: status\ndata: " + json.dumps({"content": f"Provider {prov_display} failed, trying next..."}) + "\n\n"
+                yield "event: status\ndata: " + json.dumps({"content": "Trying Next..."}) + "\n\n"
                 await asyncio.sleep(0.05)
 
         diagnostic = "I'm sorry, I encountered an issue connecting to all available AI model providers (Google Gemini).\n\n"
