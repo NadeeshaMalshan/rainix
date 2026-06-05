@@ -45,7 +45,7 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         
         {/* Left Side: 24 hrs weather */}
-        <div className="deep-frosted-pill rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72">
           <h3 className="text-center font-medium text-sm md:text-base text-white/90 mb-4 tracking-wide">
             24-Hour Forecast
           </h3>
@@ -99,7 +99,7 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
         </div>
 
         {/* Right Side: 24 hrs raining mm */}
-        <div className="deep-frosted-pill rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-white/80 font-medium flex items-center gap-2">
              

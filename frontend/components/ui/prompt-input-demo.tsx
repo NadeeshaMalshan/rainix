@@ -32,7 +32,7 @@ export function PromptInputBasic() {
       onValueChange={handleValueChange}
       isLoading={isLoading}
       onSubmit={handleSubmit}
-      className="w-full max-w-[400px] bg-white/20 backdrop-blur-md border border-white/30 shadow-lg text-white mx-auto mt-8"
+      className="w-full max-w-[400px] deep-frosted-pill shadow-lg text-white mx-auto mt-8"
     >
       <PromptInputTextarea placeholder="Ask AI about the weather..." className="placeholder:text-white/60 text-white" />
       <PromptInputActions className="justify-end pt-2">

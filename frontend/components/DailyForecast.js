@@ -25,7 +25,7 @@ const DailyForecast = ({ dailyData }) => {
 
   return (
     <div className="w-full max-w-[1600px] w-[95vw] mx-auto mt-6 px-2 md:px-6">
-      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 shadow-glass flex flex-col min-w-0">
+      <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-6 shadow-glass flex flex-col min-w-0" style={{ animationDelay: '0.2s' }}>
         <h3 className="text-white/80 font-medium flex items-center gap-2 mb-4">
          
           14-Day Forecast

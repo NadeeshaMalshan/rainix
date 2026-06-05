@@ -13,7 +13,7 @@ exports.getRiversByBasin = async (basinName) => {
     let formattedBasin = basinName.replace(/-/g, " ");
     formattedBasin = formattedBasin.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
-    const url = `https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0/query?f=json&where=basin='%5Bbasin%5D'&outFields=gauge,water_level,rain_fall,CreationDate,alertpull,minorpull,majorpull&orderByFields=CreationDate+DESC&returnGeometry=false`.replace('%5Bbasin%5D', encodeURIComponent(formattedBasin));
+    const url = `https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0/query?f=json&where=basin='%5Bbasin%5D'&outFields=gauge,water_level,rain_fall,CreationDate,alertpull,minorpull,majorpull&orderByFields=CreationDate+DESC&returnGeometry=true&outSR=4326`.replace('%5Bbasin%5D', encodeURIComponent(formattedBasin));
 
     const response = await axios.get(url);
     const features = response.data?.features;
@@ -31,7 +31,7 @@ exports.getRiversByBasin = async (basinName) => {
       if (!attrs || !attrs.gauge) continue;
 
       if (!uniqueGauges.has(attrs.gauge)) {
-        uniqueGauges.set(attrs.gauge, { latest: attrs, history: [] });
+        uniqueGauges.set(attrs.gauge, { latest: attrs, geometry: feature.geometry, history: [] });
       }
       
       if (attrs.water_level !== null && attrs.water_level !== undefined && attrs.CreationDate) {
@@ -44,6 +44,7 @@ exports.getRiversByBasin = async (basinName) => {
 
     const transformed = Array.from(uniqueGauges.values()).map(deviceData => {
       const device = deviceData.latest;
+      const geometry = deviceData.geometry;
       const history = deviceData.history.reverse();
       const currentLevel = device.water_level;
       
@@ -65,12 +66,18 @@ exports.getRiversByBasin = async (basinName) => {
           status = "UNKNOWN";
       }
 
+      let gaugeName = device.gauge;
+      if (gaugeName === "Kalu Ganga") {
+        gaugeName = "Ratnapura";
+      }
+
       return {
-        id: `arcgis_${device.gauge.toLowerCase().replace(/\\s+/g, '_')}`,
+        id: `arcgis_${device.gauge.toLowerCase().replace(/\s+/g, '_')}`,
         deviceKey: null, // No rivernet device key
-        name: device.gauge,
-        area: device.gauge,
-        city: device.gauge,
+        name: gaugeName,
+        originalName: device.gauge,
+        area: gaugeName,
+        city: gaugeName,
         type: "ARCGIS",
         status: status,
         maxLevel: null,
@@ -88,6 +95,8 @@ exports.getRiversByBasin = async (basinName) => {
         currentLevel: currentLevel,
         rainfall: device.rain_fall !== undefined ? device.rain_fall : null,
         source: "ArcGIS",
+        lat: geometry ? geometry.y : null,
+        lon: geometry ? geometry.x : null,
         historicalData: history
       };
     });
@@ -104,7 +113,7 @@ exports.getRiversByBasin = async (basinName) => {
 // ========================================
 exports.getAllRivers = async () => {
   try {
-    const url = `https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0/query?f=json&where=1=1&outFields=basin,gauge,water_level,rain_fall,CreationDate,alertpull,minorpull,majorpull&orderByFields=CreationDate+DESC&returnGeometry=false`;
+    const url = `https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0/query?f=json&where=1=1&outFields=basin,gauge,water_level,rain_fall,CreationDate,alertpull,minorpull,majorpull&orderByFields=CreationDate+DESC&returnGeometry=true&outSR=4326`;
 
     const response = await axios.get(url);
     const features = response.data?.features;
@@ -118,7 +127,7 @@ exports.getAllRivers = async () => {
       const attrs = feature.attributes;
       if (!attrs || !attrs.gauge) continue;
       if (!uniqueGauges.has(attrs.gauge)) {
-        uniqueGauges.set(attrs.gauge, { latest: attrs, history: [] });
+        uniqueGauges.set(attrs.gauge, { latest: attrs, geometry: feature.geometry, history: [] });
       }
       if (attrs.water_level !== null && attrs.water_level !== undefined && attrs.CreationDate) {
         uniqueGauges.get(attrs.gauge).history.push({
@@ -130,6 +139,7 @@ exports.getAllRivers = async () => {
 
     const transformed = Array.from(uniqueGauges.values()).map(deviceData => {
       const device = deviceData.latest;
+      const geometry = deviceData.geometry;
       const history = deviceData.history.reverse();
       const currentLevel = device.water_level;
       const alert = device.alertpull;
@@ -149,13 +159,19 @@ exports.getAllRivers = async () => {
           status = "UNKNOWN";
       }
 
+      let gaugeName = device.gauge;
+      if (gaugeName === "Kalu Ganga") {
+        gaugeName = "Ratnapura";
+      }
+
       return {
-        id: `arcgis_${device.gauge.toLowerCase().replace(/\\s+/g, '_')}`,
+        id: `arcgis_${device.gauge.toLowerCase().replace(/\s+/g, '_')}`,
         deviceKey: null,
-        name: device.gauge,
+        name: gaugeName,
+        originalName: device.gauge,
         basin: device.basin,
-        area: device.gauge,
-        city: device.gauge,
+        area: gaugeName,
+        city: gaugeName,
         type: "ARCGIS",
         status: status,
         maxLevel: null,
@@ -173,6 +189,8 @@ exports.getAllRivers = async () => {
         currentLevel: currentLevel,
         rainfall: device.rain_fall !== undefined ? device.rain_fall : null,
         source: "ArcGIS",
+        lat: geometry ? geometry.y : null,
+        lon: geometry ? geometry.x : null,
         historicalData: history
       };
     });
@@ -216,6 +234,11 @@ exports.getRiversByLocation = async (location) => {
             
             // Match basin directly against the search term (e.g. searching for "kalu ganga")
             if (river.basin && normalize(river.basin) === normSearch) {
+                return true;
+            }
+
+            // Original name match
+            if (river.originalName && normalize(river.originalName).includes(normSearch)) {
                 return true;
             }
 

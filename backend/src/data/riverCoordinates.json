@@ -1,0 +1,37 @@
+{
+  "I97": {
+    "name": "Kalu Ganga (Ratnapura)",
+    "lat": 6.6828,
+    "lon": 80.3992
+  },
+  "ID3": {
+    "name": "Kuru Ganga (Kuruvita)",
+    "lat": null,
+    "lon": null
+  },
+  "ID4": {
+    "name": "Galathura Oya (Ayagama)",
+    "lat": null,
+    "lon": null
+  },
+  "ID5": {
+    "name": "Denawaka Ganga (Pelmadulla)",
+    "lat": null,
+    "lon": null
+  },
+  "ID6": {
+    "name": "Kukule Ganga (Kalawana)",
+    "lat": null,
+    "lon": null
+  },
+  "ID7": {
+    "name": "Wey Ganga (Kahawaththa)",
+    "lat": null,
+    "lon": null
+  },
+  "ID8": {
+    "name": "Niriella Ganga (Elapatha)",
+    "lat": null,
+    "lon": null
+  }
+}

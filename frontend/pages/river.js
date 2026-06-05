@@ -5,6 +5,8 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { PromptInputBasic } from '../components/ui/prompt-input-demo';
 import LiquidGlassText2D from '../components/LiquidGlassText2D';
+import StationsMap from '../components/StationsMap';
+import StationWeatherCard from '../components/StationWeatherCard';
 
 export default function RiverDashboard() {
   const router = useRouter();
@@ -36,6 +38,19 @@ export default function RiverDashboard() {
   const filterId = React.useId ? React.useId().replace(/:/g, "") : "river-glass-text";
   
   const celestialRef = useRef(null);
+
+  // Memoize bubbles so they don't regenerate (and glitch) on every re-render
+  const bubbles = React.useMemo(() => {
+    return Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      size: Math.random() * 12 + 4,
+      left: Math.random() * 100,
+      delayRise: Math.random() * -20,
+      durRise: 8 + Math.random() * 10,
+      durSway: 3 + Math.random() * 4,
+      swayAmount: Math.random() * 30 + 10
+    }));
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -155,12 +170,21 @@ export default function RiverDashboard() {
     }
   }, [cityData]);
 
-  const handleSearchSubmit = (query) => {
-    if (query && query.trim()) {
-      setShowSuggestions(false);
-      setIsFocused(false);
-      const formattedQuery = query.trim().toLowerCase().replace(/\s+/g, '-');
+  const handleSearchSubmit = (query, isRiver = false) => {
+    if (!query || query.trim() === '') return;
+    const trimmed = query.trim();
+    setShowSuggestions(false);
+    setIsFocused(false);
+    
+    const queryLower = trimmed.toLowerCase();
+    const riverKeywords = ['ganga', 'oya', 'river'];
+    const isRiverQuery = isRiver || riverKeywords.some(kw => queryLower.includes(kw));
+
+    if (isRiverQuery) {
+      const formattedQuery = trimmed.toLowerCase().replace(/\s+/g, '-');
       router.push(`/river?${encodeURIComponent(formattedQuery)}`);
+    } else {
+      router.push(`/weather?city=${encodeURIComponent(trimmed)}`);
     }
   };
 
@@ -211,90 +235,9 @@ export default function RiverDashboard() {
   const formattedCity = activeRiver ? activeRiver.name : (cityData?.weather?.city || queryLocation || 'Ratnapura');
   const formattedCountry = activeRiver ? (activeRiver.basin ? `${activeRiver.basin} Basin` : (cityData?.weather?.city || queryLocation || 'Ratnapura')) : (cityData?.weather?.country || 'Sri Lanka');
 
-  const parseTimeToMinutes = (timeStr) => {
-    if (!timeStr) return 720;
-    try {
-      if (timeStr.includes('T')) {
-        const parts = timeStr.split('T')[1].split(':');
-        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-      }
-      const parts = timeStr.split(':');
-      if (parts.length >= 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-    } catch (e) {
-      console.error(e);
-    }
-    return 720;
-  };
-
-  const calculateOrbit = (timeStr, sunriseStr, sunsetStr) => {
-    const t_curr = parseTimeToMinutes(timeStr);
-    const t_sunrise = parseTimeToMinutes(sunriseStr) || 351;
-    const t_sunset = parseTimeToMinutes(sunsetStr) || 1098;
-    const isNight = t_curr < t_sunrise || t_curr > t_sunset;
-    let progress = 0.5;
-    if (!isNight) {
-      const dayDuration = t_sunset - t_sunrise;
-      progress = dayDuration > 0 ? (t_curr - t_sunrise) / dayDuration : 0.5;
-    } else {
-      const nightDuration = (1440 - t_sunset) + t_sunrise;
-      const elapsed = t_curr > t_sunset ? (t_curr - t_sunset) : ((1440 - t_sunset) + t_curr);
-      progress = nightDuration > 0 ? elapsed / nightDuration : 0.5;
-    }
-    progress = Math.max(0, Math.min(1, progress));
-    const angle = Math.PI * (1 - progress); 
-    const x = 50 + 40 * Math.cos(angle);
-    const y = 70 - 45 * Math.sin(angle);
-    return { isNight, x, y };
-  };
-
-  const orbit = weather ? calculateOrbit(weather.time, weather.sunrise, weather.sunset) : { isNight: false, x: 50, y: 25 };
-  if (force && force.includes('night')) orbit.isNight = true;
-  
-  const determineWeatherState = () => {
-    if (force) return force;
-    if (!weather) return 'sunny';
-    const code = weather.weatherCode;
-    const isNight = orbit.isNight;
-    if (code === 0) return isNight ? 'clear_night' : 'sunny';
-    if (code >= 1 && code <= 3) return isNight ? 'partly_cloudy_night' : 'partly_cloudy_day';
-    if (code === 45 || code === 48) return 'cloudy';
-    if ((code >= 51 && code <= 57) || (code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return 'rainy';
-    if (code >= 95) return 'thunderstorm';
-    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
-    return 'cloudy';
-  };
-
-  const weatherState = determineWeatherState();
-
-  const getBackgroundGradient = (state) => {
-    switch (state) {
-      case 'sunny': return 'linear-gradient(180deg, #3A82F6 0%, #89CFF0 100%)';
-      case 'partly_cloudy_day': return 'linear-gradient(180deg, #5B9DD9 0%, #AECBEB 100%)';
-      case 'cloudy': return 'linear-gradient(180deg, #78909C 0%, #B0BEC5 100%)';
-      case 'rainy': return 'linear-gradient(180deg, #455A64 0%, #78909C 100%)';
-      case 'thunderstorm': return 'linear-gradient(180deg, #263238 0%, #37474F 100%)';
-      case 'snow': return 'linear-gradient(180deg, #90A4AE 0%, #CFD8DC 100%)';
-      case 'clear_night': return 'linear-gradient(180deg, #0A192F 0%, #112240 100%)';
-      case 'partly_cloudy_night': return 'linear-gradient(180deg, #112240 0%, #1A365D 100%)';
-      default: return 'linear-gradient(180deg, #3A82F6 0%, #89CFF0 100%)';
-    }
-  };
-
-  const getTextColor = () => 'text-white drop-shadow-md';
-  const textColorClass = getTextColor();
-
-  const getCloudConfig = (state) => {
-    switch (state) {
-      case 'partly_cloudy_day':
-      case 'partly_cloudy_night': return { count: 15, filter: '' };
-      case 'cloudy': return { count: 25, filter: 'brightness-90' };
-      case 'rainy':
-      case 'thunderstorm': return { count: 35, filter: 'brightness-50 contrast-125 saturate-50' };
-      case 'snow': return { count: 25, filter: 'brightness-90' };
-      default: return { count: 0, filter: '' };
-    }
-  };
-  const cloudConfig = getCloudConfig(weatherState);
+  const alertVal = activeRiver?.alertLevels?.find(x => x.name === 'alert')?.value || activeRiver?.levels?.alert || '--';
+  const minorVal = activeRiver?.alertLevels?.find(x => x.name === 'minor')?.value || activeRiver?.levels?.minor || '--';
+  const majorVal = activeRiver?.alertLevels?.find(x => x.name === 'major')?.value || activeRiver?.levels?.major || '--';
 
   let currentRiverLevel = '--';
   if (activeRiver) {
@@ -313,6 +256,34 @@ export default function RiverDashboard() {
     }
   }
 
+  const determineRiverState = () => {
+    if (force) return force;
+    if (currentRiverLevel === '--') return 'normal';
+    const lvl = parseFloat(currentRiverLevel);
+    const major = parseFloat(majorVal);
+    const minor = parseFloat(minorVal);
+    const alert = parseFloat(alertVal);
+
+    if (!isNaN(major) && lvl >= major) return 'major_flood';
+    if (!isNaN(minor) && lvl >= minor) return 'minor_flood';
+    if (!isNaN(alert) && lvl >= alert) return 'alert';
+    return 'normal';
+  };
+
+  const riverState = determineRiverState();
+
+  const getBackgroundGradient = (state) => {
+    switch (state) {
+      case 'major_flood': return 'linear-gradient(180deg, #4A0E17 0%, #8A2332 100%)';
+      case 'minor_flood': return 'linear-gradient(180deg, #5C2A12 0%, #A25025 100%)';
+      case 'alert': return 'linear-gradient(180deg, #0F304A 0%, #295F8A 100%)';
+      case 'normal': default: return 'linear-gradient(180deg, #071F36 0%, #10416A 100%)';
+    }
+  };
+
+  const getTextColor = () => 'text-white drop-shadow-md';
+  const textColorClass = getTextColor();
+
   const precipitation = weather?.precipitationProbability || 0;
 
   let minRiverLevel = '--';
@@ -326,6 +297,28 @@ export default function RiverDashboard() {
         const values = chartData.map(d => d.y !== undefined ? d.y : d.value);
         minRiverLevel = Math.min(...values).toFixed(1);
         maxRiverLevel = Math.max(...values).toFixed(1);
+      }
+    }
+  }
+
+  let previousRiverLevel = null;
+  let trendIcon = null;
+  let trendColor = '';
+
+  if (activeRiver && chartData.length > 1) {
+    const prevPoint = chartData[chartData.length - 2];
+    previousRiverLevel = prevPoint.y !== undefined ? prevPoint.y : prevPoint.value;
+    
+    const currentNum = parseFloat(currentRiverLevel);
+    const prevNum = parseFloat(previousRiverLevel);
+    
+    if (!isNaN(currentNum) && !isNaN(prevNum)) {
+      if (currentNum > prevNum) {
+         trendIcon = 'arrow_upward';
+      } else if (currentNum < prevNum) {
+         trendIcon = 'arrow_downward';
+      } else {
+         trendIcon = null;
       }
     }
   }
@@ -394,9 +387,7 @@ export default function RiverDashboard() {
     return chartHeight - (((v - yMinChart) / (yMaxChart - yMinChart)) * chartHeight);
   };
 
-  const alertVal = activeRiver?.alertLevels?.find(x => x.name === 'alert')?.value || activeRiver?.levels?.alert || '--';
-  const minorVal = activeRiver?.alertLevels?.find(x => x.name === 'minor')?.value || activeRiver?.levels?.minor || '--';
-  const majorVal = activeRiver?.alertLevels?.find(x => x.name === 'major')?.value || activeRiver?.levels?.major || '--';
+  // (Alerts already declared above)
 
   const alertY = getYPosForValue(alertVal);
   const minorY = getYPosForValue(minorVal);
@@ -429,29 +420,20 @@ export default function RiverDashboard() {
       </Script>
 
       <style>{`
-        @keyframes rain-fall { 0% { transform: translateY(-100px); } 100% { transform: translateY(120vh); } }
-        @keyframes snow-fall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 0.8; } 100% { transform: translateY(100vh) translateX(30px) rotate(360deg); opacity: 0; } }
-        @keyframes star-twinkle { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
-        @keyframes cloud-move { 0% { transform: translateX(0); } 100% { transform: translateX(150vw); } }
-        @keyframes fade-in-up { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
-        @keyframes pop-in { 0% { transform: translate(-50%, -50%) scale(0); } 50% { transform: translate(-50%, -50%) scale(1.1); } 100% { transform: translate(-50%, -50%) scale(1); } }
-        @keyframes lightning-flash { 0%, 100% { opacity: 0; } 1% { opacity: 0.6; } 2% { opacity: 0; } 3% { opacity: 0.45; } 10% { opacity: 0; } }
+        @keyframes fade-in-up { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: none; } }
+        @keyframes bubble-rise-real { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-120vh); opacity: 0; } }
+        @keyframes bubble-sway-real { 0% { transform: translateX(0); } 100% { transform: translateX(var(--sway-amount)); } }
         
-        .animate-rain { animation: rain-fall linear infinite; will-change: transform; }
-        .animate-snow { animation: snow-fall linear infinite; will-change: transform, opacity; }
-        .animate-star { animation: star-twinkle ease-in-out infinite; will-change: opacity, transform; }
-        .animate-cloud { animation: cloud-move linear infinite; will-change: transform; }
         .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        .animate-pop-in { animation: pop-in 1.5s cubic-bezier(0.68, -0.55, 0.26, 1.55) forwards; }
-        .animate-lightning { animation: lightning-flash 5s infinite; pointer-events: none; }
       `}</style>
 
       <style dangerouslySetInnerHTML={{ __html: `
         .responsive-weather-search {
           position: absolute !important;
           top: 1rem !important;
-          left: 50% !important;
-          transform: translateX(-50%) !important;
+          left: 0 !important;
+          right: 0 !important;
+          margin-inline: auto !important;
           z-index: 50 !important;
           width: 100% !important;
           max-width: 300px !important;
@@ -462,76 +444,69 @@ export default function RiverDashboard() {
         @media (min-width: 768px) { .responsive-weather-search { max-width: 448px !important; } }
 
         .deep-frosted-pill {
-          background-color: rgba(255, 255, 255, 0.22) !important;
+          background-color: rgba(255, 255, 255, 0.02) !important;
           -webkit-backdrop-filter: blur(16px) !important;
           backdrop-filter: blur(16px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.32) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          transform: translateZ(0);
         }
         .deep-frosted-dropdown {
           background-color: rgba(13, 20, 35, 0.85) !important;
           -webkit-backdrop-filter: blur(28px) !important;
           backdrop-filter: blur(28px) !important;
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          transform: translateZ(0);
+        }
+        .deep-frosted-card {
+          background-color: rgba(255, 255, 255, 0.03) !important;
+          -webkit-backdrop-filter: blur(16px) !important;
+          backdrop-filter: blur(16px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3) !important;
+          transform: translateZ(0);
         }
       `}} />
 
       <div 
         className={`font-poppins overflow-x-hidden overflow-y-auto w-full max-w-full min-h-screen relative flex flex-col justify-between select-none transition-all duration-1000 pb-12 ${textColorClass}`}
-        style={{ background: getBackgroundGradient(weatherState) }}
+        style={{ background: getBackgroundGradient(riverState) }}
       >
-        {weatherState === 'thunderstorm' && <div className="lightning-overlay animate-lightning bg-white absolute inset-0 z-40" />}
-        {['clear_night', 'partly_cloudy_night'].includes(weatherState) && (
-          <div className="star-container absolute inset-0 pointer-events-none z-0">
-            {Array.from({ length: 45 }).map((_, i) => (
-              <div key={i} className="star-particle animate-star absolute bg-white rounded-full" style={{ width: `${Math.random() * 2 + 1}px`, height: `${Math.random() * 2 + 1}px`, left: `${Math.random() * 100}%`, top: `${Math.random() * 65}%`, animationDuration: `${0.8 + Math.random() * 1.8}s`, animationDelay: `${Math.random() * -2}s` }} />
-            ))}
-          </div>
-        )}
-
-        <div ref={celestialRef} className={`absolute z-10 pointer-events-none animate-pop-in ${['cloudy', 'thunderstorm', 'rainy', 'snow'].includes(weatherState) ? 'hidden' : ''}`} style={{ left: `${orbit.x}%`, top: `${orbit.y}%` }}>
-          {orbit.isNight ? (
-            <img src="/images/moon.png" alt="Moon" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
-          ) : (
-            <img src="/images/sun.png" alt="Sun" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
-          )}
+        {/* Underwater Light Rays */}
+        <div className="light-rays-container absolute top-0 left-0 right-0 h-[60vh] overflow-hidden pointer-events-none z-0 opacity-40 mix-blend-overlay">
+          <div className="absolute top-[-20%] left-[10%] w-[150px] h-[120%] bg-gradient-to-b from-white to-transparent transform rotate-[15deg] blur-[30px] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute top-[-20%] left-[40%] w-[200px] h-[120%] bg-gradient-to-b from-white to-transparent transform rotate-[25deg] blur-[40px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
+          <div className="absolute top-[-20%] left-[70%] w-[100px] h-[120%] bg-gradient-to-b from-white to-transparent transform rotate-[10deg] blur-[25px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '5s' }} />
         </div>
 
-        {cloudConfig.count > 0 && (
-          <div className="cloud-container absolute inset-0 pointer-events-none z-20">
-            {Array.from({ length: cloudConfig.count }).map((_, i) => {
-              const sizes = [ 
-                { w: 'w-64 md:w-[32rem]', h: 'h-32 md:h-[16rem]', top: '5%' }, 
-                { w: 'w-80 md:w-[45rem]', h: 'h-40 md:h-[20rem]', top: '15%' }, 
-                { w: 'w-72 md:w-[36rem]', h: 'h-36 md:h-[18rem]', top: '25%' }, 
-                { w: 'w-96 md:w-[50rem]', h: 'h-48 md:h-[24rem]', top: '35%' }, 
-                { w: 'w-64 md:w-[34rem]', h: 'h-32 md:h-[16rem]', top: '12%' }, 
-                { w: 'w-80 md:w-[40rem]', h: 'h-40 md:h-[18rem]', top: '45%' }, 
-                { w: 'w-72 md:w-[38rem]', h: 'h-36 md:h-[17rem]', top: '8%' } 
-              ];
-              const c = sizes[i % sizes.length];
-              const opacity = `opacity-${20 + (i % 5) * 10}`;
-              return (
-                <img key={i} src="/images/cloud.png" alt="Cloud" className={`weather-cloud animate-cloud absolute object-contain mix-blend-multiply ${c.w} ${c.h} ${opacity} ${cloudConfig.filter}`} style={{ top: c.top, left: `-800px`, animationDuration: `${50 + (i % 5) * 10}s`, animationDelay: `${-(i * (80 / cloudConfig.count))}s` }} />
-              );
-            })}
-          </div>
-        )}
-
-        {['rainy', 'thunderstorm'].includes(weatherState) && (
-          <div className="rain-container absolute inset-0 pointer-events-none z-20">
-            {Array.from({ length: 180 }).map((_, i) => (
-              <div key={i} className="rain-drop animate-rain absolute bg-sky-200/60 w-[2px] h-8 rounded" style={{ left: `${Math.random() * 100}%`, top: `-40px`, animationDuration: `${0.45 + Math.random() * 0.3}s`, animationDelay: `${Math.random() * -1.5}s`, opacity: Math.random() * 0.4 + 0.3 }} />
-            ))}
-          </div>
-        )}
-
-        {weatherState === 'snow' && (
-          <div className="snow-container absolute inset-0 pointer-events-none z-20">
-            {Array.from({ length: 45 }).map((_, i) => (
-              <div key={i} className="snowflake animate-snow absolute bg-white rounded-full" style={{ width: `${Math.random() * 6 + 4}px`, height: `${Math.random() * 6 + 4}px`, left: `${Math.random() * 100}%`, top: `-20px`, animationDuration: `${4.5 + Math.random() * 3.5}s`, animationDelay: `${Math.random() * -8}s` }} />
-            ))}
-          </div>
-        )}
+        {/* Realistic Rising Bubbles */}
+        <div className="bubble-container absolute inset-0 pointer-events-none z-10 overflow-hidden">
+          {bubbles.map((b) => (
+            <div 
+              key={b.id} 
+              className="absolute bottom-[-50px]"
+              style={{
+                left: `${b.left}%`,
+                animation: `bubble-rise-real ${b.durRise}s linear infinite`,
+                animationDelay: `${b.delayRise}s`
+              }}
+            >
+              <div 
+                className="rounded-full"
+                style={{
+                  width: `${b.size}px`,
+                  height: `${b.size}px`,
+                  background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 60%)',
+                  boxShadow: 'inset 0 0 10px rgba(255,255,255,0.4), inset 2px 2px 5px rgba(255,255,255,0.6), inset -2px -2px 5px rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  filter: `blur(${b.size < 6 ? 2 : (b.size < 10 ? 1 : 0)}px)`,
+                  animation: `bubble-sway-real ${b.durSway}s ease-in-out infinite alternate`,
+                  transform: `translateX(-${b.swayAmount/2}px)`,
+                  '--sway-amount': `${b.swayAmount}px`
+                }}
+              />
+            </div>
+          ))}
+        </div>
 
         <div className="responsive-weather-search">
           <div className="flex w-full items-start gap-2 md:gap-3">
@@ -569,7 +544,7 @@ export default function RiverDashboard() {
                               key={idx} 
                               className="px-3 py-1.5 md:py-2 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex flex-col mt-0.5 md:mt-1"
                               onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => { setSearchQuery(item.query); handleSearchSubmit(item.query); setIsFocused(false); }}
+                              onClick={() => { setSearchQuery(item.query); handleSearchSubmit(item.query, item.isRiver); setIsFocused(false); }}
                             >
                               <span className="font-normal text-xs md:text-sm">{item.name}</span>
                               <span className="text-[9px] md:text-[10px] text-white opacity-40">{item.coords}</span>
@@ -577,9 +552,15 @@ export default function RiverDashboard() {
                           ))}
                         </div>
                       )}
+
+                      {recentSearches.length === 0 && (
+                        <div className="p-4 text-center text-white/50 text-[11px] md:text-xs font-normal">
+                          No recent searches available.
+                        </div>
+                      )}
                     </>
                   ) : (
-                    suggestions.length > 0 && (
+                    suggestions.length > 0 ? (
                       <div className="p-2 md:p-3">
                         <div className="text-[9px] md:text-[10px] uppercase font-normal text-white opacity-50 px-3 py-1 flex items-center gap-1.5 text-left">
                           <span className="material-symbols-outlined text-xs">travel_explore</span> Search Results
@@ -589,15 +570,20 @@ export default function RiverDashboard() {
                             key={idx} 
                             className="px-3 py-2 md:py-2.5 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex flex-col border-b border-white/5 last:border-b-0"
                             onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => { setSearchQuery(s.name); handleSearchSubmit(s.name); setIsFocused(false); }}
+                            onClick={() => { setSearchQuery(s.name); handleSearchSubmit(s.name, s.isRiver); setIsFocused(false); }}
                           >
                             <span className="font-normal text-xs md:text-sm flex items-center gap-1">
+                              {s.isRiver && <span className="material-symbols-outlined text-white opacity-70 text-sm">waves</span>}
                               {s.name}
-                              {s.isRiver && <span className="text-[9px] bg-[#3A82F6]/30 text-[#89CFF0] px-1.5 py-0.5 rounded ml-1 font-medium border border-[#3A82F6]/50">River</span>}
                             </span>
-                            <span className="text-[9px] md:text-[10px] text-white opacity-50">{s.city ? `${s.city}, ` : (s.admin1 ? `${s.admin1}, ` : '')}{s.country}</span>
+                            <span className="text-[9px] md:text-[10px] text-white opacity-50">{s.admin1 ? `${s.admin1}, ` : ''}{s.country}</span>
                           </div>
                         ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 md:p-5 text-center text-white/50 text-xs md:text-sm font-normal">
+                        <span className="material-symbols-outlined text-white/40 text-lg md:text-xl block mb-1">info</span>
+                        Search results are not available
                       </div>
                     )
                   )}
@@ -616,13 +602,13 @@ export default function RiverDashboard() {
         </div>
 
         {!isLoading && !errorMsg && cityData && (
-          <div className="flex-1 flex flex-col justify-center items-center w-full min-h-full relative z-40 main-weather-content animate-fade-in-up pt-20 md:pt-24 pb-8">
-            <div className="flex flex-col items-center w-full max-w-4xl px-4">
+          <div className="flex-1 flex flex-col justify-center items-center w-full min-h-full relative z-40 main-weather-content pt-20 md:pt-24 pb-8">
+            <div className="flex flex-col items-center w-full max-w-6xl px-4">
               
               <div className="relative z-50">
                 <div 
                   onClick={() => { if (rivers.length > 1) setShowStationsDropdown(!showStationsDropdown); }}
-                  className={`flex items-center gap-2 mb-1 justify-center bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 transition-colors ${rivers.length > 1 ? 'hover:bg-white/10 cursor-pointer' : ''}`}
+                  className={`flex items-center gap-2 mb-1 justify-center transition-colors ${rivers.length > 1 ? 'hover:opacity-80 cursor-pointer' : ''}`}
                 >
                   <h1 className={`text-xl xs:text-2xl md:text-3xl font-semibold tracking-tight ${textColorClass} drop-shadow-md text-center`}>
                     {formattedCity}
@@ -668,15 +654,22 @@ export default function RiverDashboard() {
                 <span className={`text-[6rem] xs:text-[7rem] md:text-[9rem] leading-none font-light tracking-tighter ${textColorClass} drop-shadow-lg`}>
                   {currentRiverLevel}
                 </span>
-                <span className={`text-3xl md:text-5xl font-normal mb-4 md:mb-8 ml-1 ${textColorClass} opacity-80`}>
-                  {currentRiverLevel !== '--' ? 'm' : ''}
-                </span>
+                <div className="flex items-center mb-3 md:mb-4 ml-1 md:ml-2">
+                  <span className={`text-4xl md:text-5xl font-normal ${textColorClass} opacity-80`}>
+                    {currentRiverLevel !== '--' ? 'm' : ''}
+                  </span>
+                  {trendIcon && currentRiverLevel !== '--' && (
+                    <span className={`material-symbols-outlined text-3xl md:text-4xl drop-shadow-sm font-bold ml-1 ${textColorClass} opacity-80 ${trendColor}`}>
+                      {trendIcon}
+                    </span>
+                  )}
+                </div>
               </div>
               
-              
+            
 
               {/* 24-Hour River Level Trend Card */}
-              <div className="w-full bg-[#0D1423]/60 backdrop-blur-2xl rounded-3xl p-5 md:p-8 border border-white/10 shadow-2xl flex flex-col relative overflow-hidden">
+              <div className="w-full rounded-3xl p-5 md:p-8 flex flex-col relative overflow-hidden">
                 <div className="flex justify-between items-center mb-8 relative z-10">
                   <h3 className="text-sm md:text-base font-semibold text-white/90">24-Hour River Level Trend</h3>
                   <div className="flex gap-2">
@@ -686,10 +679,14 @@ export default function RiverDashboard() {
                 <span className="flex items-center gap-1.5 text-sm md:text-base font-medium text-white">
                   <span className="material-symbols-outlined text-[16px] md:text-[18px]">arrow_downward</span> {minRiverLevel}m
                 </span>
-                <span className="text-white/30">|</span>
-                <span className="flex items-center gap-1.5 text-sm md:text-base font-medium text-white">
-                  <span className="material-symbols-outlined text-[16px] md:text-[18px]">water_drop</span> {precipitation}%
-                </span>
+                {weather && (
+                  <>
+                    <span className="text-white/30">|</span>
+                    <span className="flex items-center gap-1.5 text-sm md:text-base font-medium text-white">
+                      <span className="material-symbols-outlined text-[16px] md:text-[18px]">water_drop</span> {precipitation}%
+                    </span>
+                  </>
+                )}
                   </div>
                 </div>
 
@@ -730,19 +727,16 @@ export default function RiverDashboard() {
                     {majorY !== null && (
                       <g>
                         <line x1="0" y1={majorY} x2={chartWidth} y2={majorY} stroke="#eff5ff" strokeWidth="1" strokeOpacity="0.3" strokeDasharray="5,5" />
-                        <text x={chartWidth} y={majorY - 5} fill="#eff5ff" fontSize="12" opacity="0.8" fontFamily="sans-serif" textAnchor="end">MAJOR FLOOD ({majorVal}m)</text>
                       </g>
                     )}
                     {minorY !== null && (
                       <g>
                         <line x1="0" y1={minorY} x2={chartWidth} y2={minorY} stroke="#eff5ff" strokeWidth="1" strokeOpacity="0.3" strokeDasharray="5,5" />
-                        <text x={chartWidth} y={minorY - 5} fill="#eff5ff" fontSize="12" opacity="0.8" fontFamily="sans-serif" textAnchor="end">MINOR FLOOD ({minorVal}m)</text>
                       </g>
                     )}
                     {alertY !== null && (
                       <g>
                         <line x1="0" y1={alertY} x2={chartWidth} y2={alertY} stroke="#eff5ff" strokeWidth="1" strokeOpacity="0.3" strokeDasharray="5,5" />
-                        <text x={chartWidth} y={alertY - 5} fill="#eff5ff" fontSize="12" opacity="0.8" fontFamily="sans-serif" textAnchor="end">ALERT ({alertVal}m)</text>
                       </g>
                     )}
 
@@ -767,6 +761,34 @@ export default function RiverDashboard() {
                       );
                     })}
                   </svg>
+
+                  {/* HTML Overlay for Text Labels */}
+                  <div className="absolute inset-0 pointer-events-none z-10">
+                    {majorY !== null && (
+                      <div 
+                        className="absolute right-0 text-[9px] md:text-xs text-[#eff5ff] opacity-80 font-sans tracking-wide pr-1"
+                        style={{ top: `calc(${(majorY / chartHeight) * 100}% - 14px)` }}
+                      >
+                        MAJOR FLOOD ({majorVal}m)
+                      </div>
+                    )}
+                    {minorY !== null && (
+                      <div 
+                        className="absolute right-0 text-[9px] md:text-xs text-[#eff5ff] opacity-80 font-sans tracking-wide pr-1"
+                        style={{ top: `calc(${(minorY / chartHeight) * 100}% - 14px)` }}
+                      >
+                        MINOR FLOOD ({minorVal}m)
+                      </div>
+                    )}
+                    {alertY !== null && (
+                      <div 
+                        className="absolute right-0 text-[9px] md:text-xs text-[#eff5ff] opacity-80 font-sans tracking-wide pr-1"
+                        style={{ top: `calc(${(alertY / chartHeight) * 100}% - 14px)` }}
+                      >
+                        ALERT ({alertVal}m)
+                      </div>
+                    )}
+                  </div>
 
                   {/* Tooltip */}
                   {hoveredPoint && (
@@ -817,11 +839,25 @@ export default function RiverDashboard() {
                   </div>
                 </div>
               </div>
-
-              {/* AI Assistant Input */}
-              <div className="w-full mt-10 md:mt-12 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+              <div className="w-full flex flex-col xl:flex-row gap-6 mt-8 mb-4 relative z-20">
+                <div className="w-full xl:w-1/2">
+                  <StationWeatherCard 
+                    lat={activeRiver?.lat || null} 
+                    lon={activeRiver?.lon || null} 
+                    stationName={activeRiver?.name || ''} 
+                  />
+                </div>
+                <div className="w-full xl:w-1/2">
+                  <div className="w-full h-full min-h-[200px] md:min-h-[240px]">
+                    <StationsMap stations={rivers} activeStationIdx={selectedRiverIdx} />
+                  </div>
+                </div>
+              </div>              {/* AI Assistant Input */}
+              <div className="w-full mt-10 md:mt-12">
                 <PromptInputBasic />
               </div>
+
+              
             </div>
           </div>
         )}

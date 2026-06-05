@@ -56,7 +56,7 @@ const WeatherMetricsRow = ({ weather }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         
         {/* WIND */}
-        <div className="deep-frosted-pill rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72" style={{ animationDelay: '0.4s' }}>
           <h3 className="text-white/80 font-medium flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-lg">air</span> Wind
           </h3>
@@ -97,7 +97,7 @@ const WeatherMetricsRow = ({ weather }) => {
         </div>
 
         {/* PRESSURE */}
-        <div className="deep-frosted-pill rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72" style={{ animationDelay: '0.4s' }}>
           <h3 className="text-white/80 font-medium flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-lg">compress</span> Pressure
           </h3>
@@ -130,7 +130,7 @@ const WeatherMetricsRow = ({ weather }) => {
         </div>
 
         {/* AQI & POLLEN */}
-        <div className="deep-frosted-pill rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72" style={{ animationDelay: '0.4s' }}>
           <h3 className="text-white/80 font-medium flex items-center gap-2 mb-2">
             AQI
           </h3>
@@ -168,7 +168,7 @@ const WeatherMetricsRow = ({ weather }) => {
         </div>
 
         {/* UV INDEX */}
-        <div className="deep-frosted-pill rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative flex flex-col h-64 md:h-72" style={{ animationDelay: '0.4s' }}>
           <h3 className="text-white/80 font-medium flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-lg">light_mode</span> UV Index
           </h3>

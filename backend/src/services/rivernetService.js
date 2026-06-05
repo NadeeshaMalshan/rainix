@@ -5,6 +5,7 @@ const {
 } = require("../utils/parseRiverLocation");
 
 const cityRiverMap = require("../data/cityRiverMap.json");
+const riverCoordinates = require("../data/riverCoordinates.json");
 
 
 // ========================================
@@ -35,17 +36,28 @@ exports.getRegionDevices = async (region) => {
         device.location || ""
       );
 
+    let riverName = parsed.river;
+    if (riverName === "Kalu Ganga" && parsed.city === "Ratnapura") {
+      riverName = "Ratnapura";
+    }
+
     return {
 
       id: device.unitId,
 
       deviceKey: device.deviceKey,
 
-      name: parsed.river,
+      name: riverName,
+      
+      originalName: parsed.river,
 
       area: parsed.city,
 
       city: parsed.city,
+      
+      lat: riverCoordinates[device.unitId]?.lat || null,
+      
+      lon: riverCoordinates[device.unitId]?.lon || null,
 
       type: device.type,
 
@@ -114,12 +126,21 @@ exports.getAllDevices = async () => {
       if (Array.isArray(devices)) {
         devices.forEach(device => {
           const parsed = parseRiverLocation(device.location || "");
+          
+          let riverName = parsed.river;
+          if (riverName === "Kalu Ganga" && parsed.city === "Ratnapura") {
+            riverName = "Ratnapura";
+          }
+
           allTransformed.push({
             id: device.unitId,
             deviceKey: device.deviceKey,
-            name: parsed.river,
+            name: riverName,
+            originalName: parsed.river,
             area: parsed.city,
             city: parsed.city,
+            lat: riverCoordinates[device.unitId]?.lat || null,
+            lon: riverCoordinates[device.unitId]?.lon || null,
             type: device.type,
             status: "UNKNOWN",
             maxLevel: device.maxLevel,
@@ -197,6 +218,11 @@ exports.getRiversByLocation = async (
 
         // 4. Mapped river name match (normalized)
         if (river.name && normalizedMappedRivers.some(mappedName => normalize(river.name).includes(mappedName))) {
+          return true;
+        }
+
+        // 5. Original name match
+        if (river.originalName && normalize(river.originalName).includes(normSearch)) {
           return true;
         }
 

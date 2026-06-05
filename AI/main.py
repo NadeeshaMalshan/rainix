@@ -102,7 +102,7 @@ agent_prompt = (
 
 "When user ask about the only wheather information, you should call `weather_tool` to get the current weather and precipitation forecast for the city/region."
 
-"When user ask about the only river information, you should call `river_tool` to get the current river levels, historical trends, and alert status for the relevant river(s) near their locations."
+"When user ask about the only river information, you should call `river_tool` to get the current river levels, historical trends, and alert status for the relevant river(s) near their locations. and predict the trend of river within 5 hours from now using the historical data and weather forecast. Or When users ask the river state in a specific time or day, you should the predict the river level at the time."
 
 "When a user asks about flood risks, river safety, or whether they should worry about a river tonight:\n"
 
@@ -115,6 +115,8 @@ agent_prompt = (
 "4. **Analyze the Risk**: Synthesize the two data points: if the river water level is high (near or above Alert/Minor thresholds) AND river status (rising/falling/stable) AND speed of rising/falling AND the forecast predicts heavy rain or high precipitation probability tonight, report an elevated risk. Otherwise, if the weather is clear and levels are normal, reassure the user.\n\n"
 
 "Formatting Rules:\n"
+
+"Don't waste more than 2000 tokens on chain-of-thought. Be concise and to the point. Focus on delivering a clear, actionable, and reassuring final answer.\n"
 
 "- Formulate a friendly, highly professional, and reassuring final response using clear bullet lists and bold text for telemetry details.\n"
 

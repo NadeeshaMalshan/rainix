@@ -75,29 +75,46 @@ export default function Landing() {
       if (searchQuery && searchQuery.trim().length >= 2) {
         const trimmed = searchQuery.trim().toLowerCase();
         
-        // Find matching river stations locally
-        const matchingRivers = riverStations.filter(river => 
-          river.name.toLowerCase().includes(trimmed)
-        ).map(river => ({
-          name: river.name,
-          country: 'Sri Lanka Hydrological Network',
-          admin1: 'River Station',
-          isRiver: true
-        }));
-
         try {
-          const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=5`);
-          const data = await res.json();
-          let combinedResults = [...matchingRivers];
-          if (data.results) {
-            combinedResults = [...combinedResults, ...data.results];
+          const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+          const [geoRes, riverRes] = await Promise.all([
+            fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=5`).catch(() => null),
+            fetch(`${nodeApiUrl}/api/rivers/search?q=${encodeURIComponent(searchQuery.trim())}`).catch(() => null)
+          ]);
+          
+          let combined = [];
+          if (riverRes) {
+            const riverData = await riverRes.json();
+            if (riverData.success && riverData.data) {
+              combined = [...riverData.data.map(r => ({ ...r, isRiver: true }))];
+            }
           }
-          setSuggestions(combinedResults);
-          setShowSuggestions(true);
+          if (geoRes) {
+            const geoData = await geoRes.json();
+            if (geoData.results) {
+              combined = [...combined, ...geoData.results];
+            }
+          }
+          
+          if (combined.length > 0) {
+            const unique = [];
+            const seen = new Set();
+            for (const item of combined) {
+              if (!seen.has(item.name)) {
+                seen.add(item.name);
+                unique.push(item);
+              }
+            }
+            setSuggestions(unique.slice(0, 8));
+            setShowSuggestions(true);
+          } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+          }
         } catch (err) {
           console.error("Failed to fetch suggestions", err);
-          setSuggestions(matchingRivers);
-          setShowSuggestions(true);
+          setSuggestions([]);
+          setShowSuggestions(false);
         }
       } else {
         setSuggestions([]);
@@ -190,20 +207,22 @@ export default function Landing() {
     }
   };
 
-  const handleSearchSubmit = (query) => {
+  const handleSearchSubmit = (query, isRiver = false) => {
     if (!query || query.trim() === '') return;
     const trimmed = query.trim();
     setShowSuggestions(false);
     
+    // Check if the query is a known river or passed explicitly as river
     const queryLower = trimmed.toLowerCase();
-    let targetCityQuery = trimmed;
-    if (queryLower.includes('kelani') || queryLower.includes('nagalagam')) {
-      targetCityQuery = 'Colombo';
-    } else if (queryLower.includes('kalu') || queryLower.includes('putupaula') || queryLower.includes('kalutara')) {
-      targetCityQuery = 'Kalutara';
-    }
+    const riverKeywords = ['ganga', 'oya', 'river'];
+    const isRiverQuery = isRiver || riverKeywords.some(kw => queryLower.includes(kw));
 
-    router.push(`/weather?city=${encodeURIComponent(targetCityQuery)}`);
+    if (isRiverQuery) {
+      const formattedQuery = trimmed.toLowerCase().replace(/\s+/g, '-');
+      router.push(`/river?${encodeURIComponent(formattedQuery)}`);
+    } else {
+      router.push(`/weather?city=${encodeURIComponent(trimmed)}`);
+    }
   };
 
   const handleGpsClick = () => {
@@ -288,7 +307,7 @@ export default function Landing() {
         }
         @keyframes fade-in-up {
           0% { opacity: 0; transform: translateY(20px); }
-          100% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 1; transform: none; }
         }
         @keyframes pop-in {
           0% { transform: scale(0.95); opacity: 0; }
@@ -319,8 +338,9 @@ export default function Landing() {
 
       <style dangerouslySetInnerHTML={{ __html: `
         .responsive-search-container {
-          width: 100% !important;
-          max-width: 300px !important;
+          left: 0 !important;
+          right: 0 !important;
+          margin-inline: auto !important;
           margin-left: auto !important;
           margin-right: auto !important;
         }
@@ -341,10 +361,11 @@ export default function Landing() {
         }
 
         .deep-frosted-pill {
-          background-color: rgba(255, 255, 255, 0.22) !important;
+          background-color: rgba(255, 255, 255, 0.02) !important;
           -webkit-backdrop-filter: blur(16px) !important;
           backdrop-filter: blur(16px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.32) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          transform: translateZ(0);
         }
         .deep-frosted-dropdown {
           background-color: rgba(13, 20, 35, 0.85) !important;
@@ -485,7 +506,7 @@ export default function Landing() {
                                 key={idx} 
                                 className="px-3 py-1.5 md:py-2 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex flex-col mt-0.5 md:mt-1"
                                 onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => { setSearchQuery(item.query); handleSearchSubmit(item.query); setIsFocused(false); }}
+                                onClick={() => { setSearchQuery(item.query); handleSearchSubmit(item.query, item.isRiver); setIsFocused(false); }}
                               >
                                 <span className="font-normal text-xs md:text-sm">{item.name}</span>
                                 <span className="text-[9px] md:text-[10px] text-white opacity-40">{item.coords}</span>
@@ -513,7 +534,7 @@ export default function Landing() {
                               key={idx} 
                               className="px-3 py-2 md:py-2.5 cursor-pointer hover:bg-white/20 rounded-lg transition-colors text-left text-white flex flex-col border-b border-white/5 last:border-b-0"
                               onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => { setSearchQuery(s.name); handleSearchSubmit(s.name); setIsFocused(false); }}
+                              onClick={() => { setSearchQuery(s.name); handleSearchSubmit(s.name, s.isRiver); setIsFocused(false); }}
                             >
                               <span className="font-normal text-xs md:text-sm flex items-center gap-1">
                                 {s.isRiver && <span className="material-symbols-outlined text-white opacity-70 text-sm">waves</span>}
