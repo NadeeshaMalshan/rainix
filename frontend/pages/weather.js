@@ -434,10 +434,69 @@ export default function WeatherDashboard() {
     // We only keep the timer cleanup just in case, though it's no longer used.
     return () => {};
   }, [weatherState, cityData, isLoading, errorMsg]);  return (
-    <div className="min-h-screen relative overflow-hidden font-sans text-white transition-all duration-1000 ease-in-out">
+    <div 
+      className={`h-[100dvh] relative overflow-hidden font-sans text-white transition-all duration-1000 ease-in-out ${textColorClass}`}
+      style={{ background: getBackgroundGradient(weatherState) }}
+    >
       
+      {/* Background Weather Effects */}
+      {weatherState === 'thunderstorm' && <div className="lightning-overlay animate-lightning bg-white absolute inset-0 z-40 pointer-events-none" />}
+      
+      {['clear_night', 'partly_cloudy_night'].includes(weatherState) && (
+        <div className="star-container absolute inset-0 pointer-events-none z-0">
+          {Array.from({ length: 45 }).map((_, i) => (
+            <div key={i} className="star-particle animate-star absolute bg-white rounded-full" style={{ width: `${Math.random() * 2 + 1}px`, height: `${Math.random() * 2 + 1}px`, left: `${Math.random() * 100}%`, top: `${Math.random() * 65}%`, animationDuration: `${0.8 + Math.random() * 1.8}s`, animationDelay: `${Math.random() * -2}s` }} />
+          ))}
+        </div>
+      )}
+
+      <div ref={celestialRef} className={`absolute z-10 pointer-events-none animate-pop-in ${isLoading || ['cloudy', 'thunderstorm', 'rainy', 'snow'].includes(weatherState) ? 'hidden' : ''}`} style={{ left: `${orbit.x}%`, top: `${orbit.y}%` }}>
+        {orbit.isNight ? (
+          <img src="/images/moon.png" alt="Moon" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
+        ) : (
+          <img src="/images/sun.png" alt="Sun" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
+        )}
+      </div>
+
+      {cloudConfig.count > 0 && (
+        <div className="cloud-container absolute inset-0 pointer-events-none z-20">
+          {Array.from({ length: cloudConfig.count }).map((_, i) => {
+            const sizes = [ 
+              { w: 'w-64 md:w-[32rem]', h: 'h-32 md:h-[16rem]', top: '5%' }, 
+              { w: 'w-80 md:w-[45rem]', h: 'h-40 md:h-[20rem]', top: '15%' }, 
+              { w: 'w-72 md:w-[36rem]', h: 'h-36 md:h-[18rem]', top: '25%' }, 
+              { w: 'w-96 md:w-[50rem]', h: 'h-48 md:h-[24rem]', top: '35%' }, 
+              { w: 'w-64 md:w-[34rem]', h: 'h-32 md:h-[16rem]', top: '12%' }, 
+              { w: 'w-80 md:w-[40rem]', h: 'h-40 md:h-[18rem]', top: '45%' }, 
+              { w: 'w-72 md:w-[38rem]', h: 'h-36 md:h-[17rem]', top: '8%' } 
+            ];
+            const c = sizes[i % sizes.length];
+            const opacity = `opacity-${20 + (i % 5) * 10}`;
+            return (
+              <img key={i} src="/images/cloud.png" alt="Cloud" className={`weather-cloud animate-cloud absolute object-contain mix-blend-multiply ${c.w} ${c.h} ${opacity} ${cloudConfig.filter}`} style={{ top: c.top, left: `-800px`, animationDuration: `${50 + (i % 5) * 10}s`, animationDelay: `${-(i * (80 / cloudConfig.count))}s` }} />
+            );
+          })}
+        </div>
+      )}
+
+      {['rainy', 'thunderstorm'].includes(weatherState) && (
+        <div className="rain-container absolute inset-0 pointer-events-none z-20">
+          {Array.from({ length: 180 }).map((_, i) => (
+            <div key={i} className="rain-drop animate-rain absolute bg-sky-200/60 w-[2px] h-8 rounded" style={{ left: `${Math.random() * 100}%`, top: `-40px`, animationDuration: `${0.45 + Math.random() * 0.3}s`, animationDelay: `${Math.random() * -1.5}s`, opacity: Math.random() * 0.4 + 0.3 }} />
+          ))}
+        </div>
+      )}
+
+      {weatherState === 'snow' && (
+        <div className="snow-container absolute inset-0 pointer-events-none z-20">
+          {Array.from({ length: 45 }).map((_, i) => (
+            <div key={i} className="snowflake animate-snow absolute bg-white rounded-full" style={{ width: `${Math.random() * 6 + 4}px`, height: `${Math.random() * 6 + 4}px`, left: `${Math.random() * 100}%`, top: `-20px`, animationDuration: `${4.5 + Math.random() * 3.5}s`, animationDelay: `${Math.random() * -8}s` }} />
+          ))}
+        </div>
+      )}
+
       {/* Sticky Navigation Bar */}
-      <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${showStickyNav ? 'translate-y-0' : '-translate-y-full'} ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`absolute top-0 left-0 right-0 z-[100] transition-all duration-300 ${showStickyNav ? 'translate-y-0' : '-translate-y-full'} ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div className="deep-frosted-pill w-full p-2 px-3 md:px-8 border-x-0 border-t-0 shadow-glass flex items-center justify-between gap-2 md:gap-4 transition-all duration-300">
           <div className={`flex items-center gap-2 sm:gap-3 ${textColorClass} shrink-0 transition-opacity duration-300 ${isMobileSearchExpanded ? 'hidden md:flex' : 'flex'}`}>
             <div className="flex shrink-0 items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/10 shadow-inner">
@@ -618,7 +677,7 @@ export default function WeatherDashboard() {
         }
         @keyframes cloud-move {
           0% { transform: translateX(0); }
-          100% { transform: translateX(150vw); }
+          100% { transform: translateX(calc(100vw + 1600px)); }
         }
         
         @keyframes fade-in-up {
@@ -697,63 +756,8 @@ export default function WeatherDashboard() {
       `}} />
 
       <div 
-        className={`font-poppins overflow-x-hidden overflow-y-auto custom-scrollbar w-full max-w-full min-h-screen relative flex flex-col justify-between select-none transition-all duration-1000 pb-12 ${textColorClass}`}
-        style={{ background: getBackgroundGradient(weatherState) }}
+        className={`font-poppins overflow-x-hidden overflow-y-auto custom-scrollbar w-full max-w-full h-full relative flex flex-col justify-between select-none pb-12 z-30`}
       >
-        {weatherState === 'thunderstorm' && <div className="lightning-overlay animate-lightning bg-white fixed inset-0 z-40 pointer-events-none" />}
-        {['clear_night', 'partly_cloudy_night'].includes(weatherState) && (
-          <div className="star-container fixed inset-0 pointer-events-none z-0">
-            {Array.from({ length: 45 }).map((_, i) => (
-              <div key={i} className="star-particle animate-star absolute bg-white rounded-full" style={{ width: `${Math.random() * 2 + 1}px`, height: `${Math.random() * 2 + 1}px`, left: `${Math.random() * 100}%`, top: `${Math.random() * 65}%`, animationDuration: `${0.8 + Math.random() * 1.8}s`, animationDelay: `${Math.random() * -2}s` }} />
-            ))}
-          </div>
-        )}
-
-        <div ref={celestialRef} className={`fixed z-10 pointer-events-none animate-pop-in ${isLoading || ['cloudy', 'thunderstorm', 'rainy', 'snow'].includes(weatherState) ? 'hidden' : ''}`} style={{ left: `${orbit.x}%`, top: `${orbit.y}%` }}>
-          {orbit.isNight ? (
-            <img src="/images/moon.png" alt="Moon" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
-          ) : (
-            <img src="/images/sun.png" alt="Sun" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
-          )}
-        </div>
-
-        {cloudConfig.count > 0 && (
-          <div className="cloud-container fixed inset-0 pointer-events-none z-20">
-            {Array.from({ length: cloudConfig.count }).map((_, i) => {
-              const sizes = [ 
-                { w: 'w-64 md:w-[32rem]', h: 'h-32 md:h-[16rem]', top: '5%' }, 
-                { w: 'w-80 md:w-[45rem]', h: 'h-40 md:h-[20rem]', top: '15%' }, 
-                { w: 'w-72 md:w-[36rem]', h: 'h-36 md:h-[18rem]', top: '25%' }, 
-                { w: 'w-96 md:w-[50rem]', h: 'h-48 md:h-[24rem]', top: '35%' }, 
-                { w: 'w-64 md:w-[34rem]', h: 'h-32 md:h-[16rem]', top: '12%' }, 
-                { w: 'w-80 md:w-[40rem]', h: 'h-40 md:h-[18rem]', top: '45%' }, 
-                { w: 'w-72 md:w-[38rem]', h: 'h-36 md:h-[17rem]', top: '8%' } 
-              ];
-              const c = sizes[i % sizes.length];
-              const opacity = `opacity-${20 + (i % 5) * 10}`;
-              return (
-                <img key={i} src="/images/cloud.png" alt="Cloud" className={`weather-cloud animate-cloud absolute object-contain mix-blend-multiply ${c.w} ${c.h} ${opacity} ${cloudConfig.filter}`} style={{ top: c.top, left: `-800px`, animationDuration: `${50 + (i % 5) * 10}s`, animationDelay: `${-(i * (80 / cloudConfig.count))}s` }} />
-              );
-            })}
-          </div>
-        )}
-
-        {['rainy', 'thunderstorm'].includes(weatherState) && (
-          <div className="rain-container fixed inset-0 pointer-events-none z-20">
-            {Array.from({ length: 180 }).map((_, i) => (
-              <div key={i} className="rain-drop animate-rain absolute bg-sky-200/60 w-[2px] h-8 rounded" style={{ left: `${Math.random() * 100}%`, top: `-40px`, animationDuration: `${0.45 + Math.random() * 0.3}s`, animationDelay: `${Math.random() * -1.5}s`, opacity: Math.random() * 0.4 + 0.3 }} />
-            ))}
-          </div>
-        )}
-
-        {weatherState === 'snow' && (
-          <div className="snow-container fixed inset-0 pointer-events-none z-20">
-            {Array.from({ length: 45 }).map((_, i) => (
-              <div key={i} className="snowflake animate-snow absolute bg-white rounded-full" style={{ width: `${Math.random() * 6 + 4}px`, height: `${Math.random() * 6 + 4}px`, left: `${Math.random() * 100}%`, top: `-20px`, animationDuration: `${4.5 + Math.random() * 3.5}s`, animationDelay: `${Math.random() * -8}s` }} />
-            ))}
-          </div>
-        )}
-
         <div className={`responsive-weather-search transition-opacity duration-500 ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <div className="flex w-full items-start gap-2 md:gap-3">
             <div className="flex-1 min-w-0 relative">
