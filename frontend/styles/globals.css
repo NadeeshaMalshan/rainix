@@ -121,29 +121,28 @@ body {
 
 /* Aggressive Global Custom Scrollbar Override */
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-track {
-  background: #050b14; /* Deep dark blue track to match the UI */
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
-  border: 2px solid #050b14;
-  background-clip: padding-box;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.4);
 }
 
 /* Firefox Support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) #050b14;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
 }
 
 /* Exclude AI Page */

@@ -7,8 +7,10 @@ const {
   getRiversByLocation: getRivernetRiversByLocation,
   getRiverChart
 } = require("../services/rivernetService");
-const {getRadarMetaData} = require("../services/rainviewer");
-
+// Ensure OPENWEATHERMAP_API_KEY is available or warn
+if (!process.env.OPENWEATHERMAP_API_KEY) {
+    console.warn("OPENWEATHERMAP_API_KEY is not set in environment variables. Radar tiles will not load properly.");
+}
 const normalize = (str) => {
     if (!str) return "";
     return str.trim().toLowerCase().replace(/[^a-z0-9]/g, "").replace(/w/g, "v").replace(/th/g, "t");
@@ -142,12 +144,10 @@ exports.getCityOverview = async (req, res) => {
         console.log("Fetching radar...");
         let radar = null;
         try {
-            const radarData = await getRadarMetaData();
-            const latestFrame = radarData.radar.past[radarData.radar.past.length - 1];
             radar = {
-                generated: radarData.generated,
-                tileUrl: `${radarData.host}${latestFrame.path}/256/{z}/{x}/{y}/2/1_1.png`,
-                latestFrame: latestFrame.time
+                generated: Math.floor(Date.now() / 1000),
+                tileUrl: `https://tile.openweathermap.org/map/{layer}/{z}/{x}/{y}.png?appid=${process.env.OPENWEATHERMAP_API_KEY}`,
+                latestFrame: Math.floor(Date.now() / 1000)
             };
             console.log("Radar OK");
         } catch (radarError) {

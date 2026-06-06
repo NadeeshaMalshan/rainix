@@ -234,7 +234,7 @@ export default function RiverDashboard() {
   const rivers = cityData?.rivers || [];
   const activeRiver = rivers.length > 0 ? (rivers[selectedRiverIdx] || rivers[0]) : null;
 
-  const formattedCity = activeRiver ? activeRiver.name : (cityData?.weather?.city || queryLocation || 'Ratnapura');
+  const formattedCity = (queryLocation ? queryLocation.replace(/-/g, ' ') : null) || (activeRiver ? activeRiver.name : cityData?.weather?.city) || 'Ratnapura';
   const formattedCountry = activeRiver ? (activeRiver.basin ? `${activeRiver.basin} Basin` : (cityData?.weather?.city || queryLocation || 'Ratnapura')) : (cityData?.weather?.country || 'Sri Lanka');
 
   const alertVal = activeRiver?.alertLevels?.find(x => x.name === 'alert')?.value || activeRiver?.levels?.alert || '--';
@@ -516,7 +516,7 @@ export default function RiverDashboard() {
           ))}
         </div>
 
-        <div className="responsive-weather-search">
+        <div className={`responsive-weather-search transition-opacity duration-500 ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <div className="flex w-full items-start gap-2 md:gap-3">
             <div className="flex-1 min-w-0 relative">
               <div className="deep-frosted-pill w-full h-11 md:h-[3.25rem] rounded-full shadow-lg transition-all duration-300 flex items-center pr-1.5 pl-3 md:pl-5 hover:bg-white/25 focus-within:bg-white/25 focus-within:border-white/40">

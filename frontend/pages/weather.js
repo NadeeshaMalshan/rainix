@@ -280,7 +280,7 @@ export default function WeatherDashboard() {
 
   const weather = cityData?.weather?.weather;
   const rivers = cityData?.rivers || [];
-  const formattedCity = cityData?.weather?.city || city || 'Ratnapura';
+  const formattedCity = city || cityData?.weather?.city || 'Ratnapura';
   const formattedCountry = cityData?.weather?.country || 'Sri Lanka';
   const currentTemp = weather ? Math.round(weather.temperature) : 31;
 
@@ -436,7 +436,7 @@ export default function WeatherDashboard() {
     <div className="min-h-screen relative overflow-hidden font-sans text-white transition-all duration-1000 ease-in-out">
       
       {/* Sticky Navigation Bar */}
-      <div className={`fixed top-0 left-0 right-0 z-[100] transition-transform duration-300 ${showStickyNav ? 'translate-y-0' : '-translate-y-full'}`}>
+      <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${showStickyNav ? 'translate-y-0' : '-translate-y-full'} ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div className="deep-frosted-pill w-full p-2 px-4 md:px-8 border-x-0 border-t-0 shadow-glass flex items-center justify-between gap-4">
           <div className={`flex items-center gap-3 ${textColorClass}`}>
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 shadow-inner">
@@ -733,7 +733,7 @@ export default function WeatherDashboard() {
           </div>
         )}
 
-        <div className="responsive-weather-search">
+        <div className={`responsive-weather-search transition-opacity duration-500 ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <div className="flex w-full items-start gap-2 md:gap-3">
             <div className="flex-1 min-w-0 relative">
               <div 

@@ -1,24 +1,16 @@
-const {
-  getRadarMetaData
-} = require(
-  "../services/rainviewer"
-);
+// No longer using rainviewer
+// Ensure OPENWEATHERMAP_API_KEY is available or warn
+if (!process.env.OPENWEATHERMAP_API_KEY) {
+    console.warn("OPENWEATHERMAP_API_KEY is not set in environment variables. Radar tiles will not load properly.");
+}
 
 exports.getRadar =
   async (req, res) => {
 
     try {
 
-      const data =
-        await getRadarMetaData();
-
-      const latestFrame =
-        data.radar.past[
-          data.radar.past.length - 1
-        ];
-
       const tileUrl =
-        `${data.host}/v2/radar/${latestFrame.time}/256/{z}/{x}/{y}/2/1_1.png`;
+        `https://tile.openweathermap.org/map/{layer}/{z}/{x}/{y}.png?appid=${process.env.OPENWEATHERMAP_API_KEY}`;
 
       res.json({
 
@@ -27,12 +19,12 @@ exports.getRadar =
         data: {
 
           generated:
-            data.generated,
+            Math.floor(Date.now() / 1000),
 
           tileUrl,
 
           latestFrame:
-            latestFrame.time
+            Math.floor(Date.now() / 1000)
 
         }
 

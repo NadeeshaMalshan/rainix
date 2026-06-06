@@ -30,13 +30,18 @@ const DailyForecast = ({ dailyData }) => {
          
           14-Day Forecast
         </h3>
-        <div className="relative flex-1 w-full overflow-x-auto hide-scrollbar" ref={scrollRef}>
-          <div className="flex flex-row items-center h-full w-max pb-2">
+        <div className="relative flex-1 w-full overflow-x-auto sleek-scrollbar" ref={scrollRef}>
+          <div className="flex flex-row items-center h-full w-max pb-3">
             {dailyData.map((d, idx) => (
               <div key={idx} className="w-[calc((100vw-48px)/4)] md:w-[100px] flex flex-col items-center justify-between h-full relative z-10 shrink-0 py-2">
-                <span className="text-[10px] md:text-xs text-white/70 mt-1 mb-1">
-                  {idx === 0 ? 'Today' : formatDate(d.date).split(',')[0]}
-                </span>
+                <div className="text-[10px] md:text-xs text-white/70 mt-1 mb-1 flex flex-col items-center">
+                  <span className="font-semibold text-white">
+                    {idx === 0 ? 'Today' : formatDate(d.date).split(',')[0]}
+                  </span>
+                  <span className="text-[9px] md:text-[10px] opacity-75 mt-0.5">
+                    {formatDate(d.date).split(', ')[1]}
+                  </span>
+                </div>
                 
                 <span className="material-symbols-outlined text-2xl text-white my-2 drop-shadow-md">
                   {getWeatherIcon(d.weatherCode)}
