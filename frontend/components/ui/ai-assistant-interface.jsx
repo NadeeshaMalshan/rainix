@@ -971,6 +971,7 @@ export function AIAssistantInterface() {
               className="flex items-center gap-1 bg-transparent text-[12px] font-medium text-gray-500 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-200 transition-colors focus:outline-none"
             >
               {modelProvider === "auto" ? "Auto" : 
+               modelProvider === "pro" ? "Gemini 3.1 Pro" :
                modelProvider === "google" ? "Gemini 3.5 Flash" :
                modelProvider === "gem3" ? "Gemini 3.1 Lite" :
                modelProvider === "gemma" ? "Gemma 4 (31B)" : "Auto"}
@@ -990,6 +991,7 @@ export function AIAssistantInterface() {
                   >
                     {[
                       { id: "auto", label: "Auto" },
+                      { id: "pro", label: "Gemini 3.1 Pro" },
                       { id: "google", label: "Gemini 3.5 Flash" },
                       { id: "gem3", label: "Gemini 3.1 Lite" },
                       { id: "gemma", label: "Gemma 4 (31B)" },

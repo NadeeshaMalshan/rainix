@@ -10,7 +10,8 @@ from langgraph.prebuilt import (create_react_agent)
 from langgraph.checkpoint.memory import MemorySaver
 from tools.weather_tool import (get_city_weather)
 from tools.river_tool import (get_river_alerts)
-from tools.location_tool import (find_rivers)
+from tools.meteo_tool import (get_meteo_alerts)
+from tools.location_tool import (find_rivers, CITY_RIVERES, get_relative_position)
 import asyncio
 import json
 import re
@@ -34,6 +35,8 @@ GOOGLE_API_KEYS = {
     "A": os.getenv("GOOGLE_API_KEY_A", ""),
     "B": os.getenv("GOOGLE_API_KEY_B", ""),
     "C": os.getenv("GOOGLE_API_KEY_C", ""),
+    "D": os.getenv("GOOGLE_API_KEY_D", ""),
+    "E": os.getenv("GOOGLE_API_KEY_E", ""),
 }
 
 
@@ -411,6 +414,9 @@ class RiverPredictionRequest(BaseModel):
     river_name: str
     historical_data: List[Dict[str, Any]]
     weather_data: Optional[Dict[str, Any]] = None
+
+class MeteoPredictionRequest(BaseModel):
+    location: str
     
 
 @app.post("/api/predict/river")
@@ -438,14 +444,48 @@ async def predict_river_level(req: RiverPredictionRequest):
         math_predicted_level = round(math_predicted_level, 2)
         
         weather_str = "No specific weather data available."
-        if req.weather_data:
-            # Extract relevant forecast (next 3 hours)
-            hourly = req.weather_data.get("weather", {}).get("hourly", [])
+        
+        # 1. Try to find an associated city for the river
+        target_city = req.river_name
+        for city, rivers in CITY_RIVERES.items():
+            if any(r.lower() in req.river_name.lower() or req.river_name.lower() in r.lower() for r in rivers):
+                target_city = city
+                break
+                
+        # 2. Fetch actual weather data
+        actual_weather = get_city_weather(target_city)
+        if actual_weather and isinstance(actual_weather, dict) and "weather" in actual_weather:
+            hourly = actual_weather.get("weather", {}).get("hourly", [])
             if hourly and len(hourly) > 3:
                 next_3h = hourly[1:4]
                 weather_str = f"Next 3 hours rainfall: {[h.get('precip_mm', 0) for h in next_3h]} mm."
             else:
-                weather_str = f"Today's rain chance: {req.weather_data.get('weather', {}).get('daily', [{}])[0].get('daily_chance_of_rain', 0)}%"
+                daily = actual_weather.get("weather", {}).get("daily", [])
+                if daily and len(daily) > 0:
+                    weather_str = f"Today's rain chance: {daily[0].get('daily_chance_of_rain', 0)}%"
+
+        # 3. Get other stations in the same river basin (Upstream/Downstream gauges)
+        basin_name = req.river_name.split("-")[0].strip()
+        basin_data_str = "No other station data available."
+        try:
+            basin_alerts = get_river_alerts(basin_name, is_basin=True)
+            if isinstance(basin_alerts, list) and len(basin_alerts) > 0:
+                other_stations = [s for s in basin_alerts if isinstance(s, dict) and s.get("name") != req.river_name]
+                if other_stations:
+                    station_info = []
+                    for s in other_stations:
+                        s_name = s.get("name", "").replace(basin_name, "").strip(" -")
+                        s_level = s.get("currentLevel", "N/A")
+                        s_trend = s.get("status", "Unknown")
+                        if s_level != "N/A":
+                            # Get topological relationship
+                            rel_pos = get_relative_position(basin_name, req.river_name, s.get("name", ""))
+                            label = f" ({rel_pos})" if rel_pos else ""
+                            station_info.append(f"{s_name}{label}: {s_level}m ({s_trend})")
+                    if station_info:
+                        basin_data_str = "Other connected stations (Upstream/Downstream): " + ", ".join(station_info)
+        except Exception as e:
+            print("Failed to fetch basin data:", e)
 
         prompt = f"""
 You are an expert hydrological AI. Your task is to predict the water level of {req.river_name} EXACTLY 3 hours from now.
@@ -454,8 +494,9 @@ Use the following real-time data:
 2. Recent History (last {len(valid_history)} points): [{history_str}]
 3. Calculated Math Trend (Base Prediction): {math_predicted_level}m (assuming current rate continues)
 4. Weather Context: {weather_str}
+5. Basin Context: {basin_data_str}
 
-Analyze the Calculated Math Trend and adjust it based on the expected rainfall. If heavy rain is expected, adjust the level higher. If no rain, keep it close to the math trend.
+Analyze the Calculated Math Trend, expected rainfall, and the levels of connected upstream/downstream stations. If upstream stations show High Alert or rising levels, or if heavy rain is expected, adjust the level higher. If no rain and upstream is safe, keep it close to the math trend.
 IMPORTANT: You MUST return ONLY a raw JSON object with NO markdown formatting, NO backticks, and NO explanations.
 Format:
 {{"predicted_level": 5.45}}
@@ -495,21 +536,98 @@ Format:
         
         # Clean up any markdown code blocks the LLM might have ignored instructions and added
         if content.startswith("```json"):
-            content = content[7:-3].strip()
-        elif content.startswith("```"):
-            content = content[3:-3].strip()
-            
+            content = content[7:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+        
         try:
-            data = json.loads(content)
-            predicted_level = float(data.get("predicted_level", current_level))
-            return {"predicted_level": predicted_level}
-        except json.JSONDecodeError:
-            print("Failed to decode JSON from prediction:", content)
-            return {"predicted_level": current_level, "error": "Invalid prediction format"}
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            print("Failed to parse JSON:", content)
+            return {"predicted_level": current_level, "error": f"Invalid JSON response: {e}"}
 
     except Exception as e:
         print("Prediction error:", str(e))
         return {"predicted_level": None, "error": str(e)}
+
+@app.post("/api/predict/meteo")
+async def predict_meteo_alerts(req: MeteoPredictionRequest):
+    try:
+        # 1. Fetch official Meteo Data & PDF Parsed Alerts
+        meteo_data = get_meteo_alerts()
+        meteo_str = json.dumps(meteo_data) if meteo_data else "No official meteo alerts available."
+
+        # 2. Fetch local weather
+        local_weather = get_city_weather(req.location)
+        weather_str = json.dumps(local_weather) if local_weather else "No local weather data available."
+
+        prompt = f"""
+You are an expert Meteorological and Geological AI. Your task is to evaluate the risk of Thunderstorms and Landslides for: {req.location}.
+
+Use the following real-time data:
+1. Official Meteorological Advisories & Parsed PDFs: {meteo_str}
+2. Local Weather Forecast for the area: {weather_str}
+
+Analyze the data. High temperature and high humidity suggest thunderstorm risk. Continuous heavy rainfall (especially > 100mm) suggests landslide risk. Check if {req.location} is mentioned in any official advisory warnings.
+
+IMPORTANT: You MUST return ONLY a raw JSON object with NO markdown formatting, NO backticks, and NO explanations.
+Format exactly like this:
+{{
+  "thunderstorm_risk": "Low" or "Moderate" or "High" or "Severe",
+  "landslide_risk": "Low" or "Moderate" or "High" or "Severe",
+  "summary_sinhala": "සිංහලෙන් කෙටි විස්තරය",
+  "summary_english": "Short description in English"
+}}
+"""
+
+        available_keys = sorted(key_llms.keys())
+        if not available_keys:
+            return {"error": "No AI providers available"}
+            
+        response = None
+        
+        # 1. Try Gemini 3.1 Pro on all available keys
+        for key in available_keys:
+            try:
+                llm = key_llms[key]["pro"]
+                response = await llm.ainvoke(prompt)
+                break
+            except Exception as e:
+                print(f"Meteo: Gemini 3.1 Pro failed on Key {key}: {e}")
+                
+        # 2. If all Pro attempts failed, try Gemma 4 on all keys
+        if response is None:
+            for key in available_keys:
+                try:
+                    llm = key_llms[key]["gemma"]
+                    response = await llm.ainvoke(prompt)
+                    break
+                except Exception as e2:
+                    print(f"Meteo: Gemma 4 failed on Key {key}: {e2}")
+
+        if response is None:
+            return {"error": "All AI models and keys failed"}
+            
+        content = response.content.strip()
+        
+        # Clean up any markdown code blocks
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+        
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            print("Failed to parse JSON:", content)
+            return {"error": f"Invalid JSON response: {e}"}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
 
 @app.get("/")
 def root():
