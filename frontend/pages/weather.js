@@ -25,6 +25,7 @@ export default function WeatherDashboard() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
+  const [isStickyFocused, setIsStickyFocused] = useState(false);
   const [showStickyNav, setShowStickyNav] = useState(false);
   const [isMobileSearchExpanded, setIsMobileSearchExpanded] = useState(false);
   const locationRef = useRef(null);
