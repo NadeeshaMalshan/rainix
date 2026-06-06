@@ -14,7 +14,7 @@ exports.fetchWeatherData = async (latitude, longitude) => {
       `&timezone=auto&forecast_days=14`;
 
     const weatherResponse = await axios.get(weatherUrl);
-    const { current, hourly, daily } = weatherResponse.data;
+    const { current, hourly, daily, timezone, utc_offset_seconds } = weatherResponse.data;
 
     // Fetch AQI and Pollen
     const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=us_aqi,alder_pollen,birch_pollen,grass_pollen,ragweed_pollen,olive_pollen,mugwort_pollen`;
@@ -45,6 +45,8 @@ exports.fetchWeatherData = async (latitude, longitude) => {
         longitude: parseFloat(longitude)
       },
       weather: {
+        timezone,
+        utcOffsetSeconds: utc_offset_seconds,
         temperature: current.temperature_2m,
         humidity: current.relative_humidity_2m,
         feelsLike: current.apparent_temperature,
@@ -114,9 +116,17 @@ exports.fetchWeatherData = async (latitude, longitude) => {
  */
 exports.fetchWeatherByCity = async (city) => {
   try {
-    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`;
+    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=10`;
     const geoResponse = await axios.get(geoUrl);
-    const location = geoResponse.data.results?.[0];
+    
+    let location = null;
+    if (geoResponse.data.results && geoResponse.data.results.length > 0) {
+      // Prioritize Sri Lanka
+      location = geoResponse.data.results.find(r => r.country === "Sri Lanka" || r.country_code === "LK");
+      if (!location) {
+        location = geoResponse.data.results[0]; // Fallback to best match
+      }
+    }
 
     if (!location) {
       throw new Error("City not found");

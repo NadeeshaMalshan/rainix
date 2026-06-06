@@ -1,170 +1,54 @@
 {
-  "colombo": [
-    "Kelani Ganga"
-  ],
-  "kelaniya": [
-    "Kelani Ganga"
-  ],
-  "kaduwela": [
-    "Kelani Ganga"
-  ],
-  "hanwella": [
-    "Kelani Ganga"
-  ],
-  "mapitigama": [
-    "Kelani Ganga"
-  ],
-  "pugoda": [
-    "Kelani Ganga"
-  ],
-  "ruwanwella": [
-    "Kelani Ganga"
-  ],
-  "avissawella": [
-    "Kelani Ganga"
-  ],
-  "wellampitiya": [
-    "Kelani Ganga"
-  ],
-  "kolonnawa": [
-    "Kelani Ganga"
-  ],
-  "ratnapura": [
-    "Kalu Ganga"
-  ],
-  "millakanda": [
-    "Kalu Ganga"
-  ],
-  "putupaula": [
-    "Kalu Ganga"
-  ],
-  "kalutara": [
-    "Kalu Ganga"
-  ],
-  "kuruvita": [
-    "Kuru Ganga"
-  ],
-  "kuruwita": [
-    "Kuru Ganga"
-  ],
-  "ayagama": [
-    "Galathura Oya",
-    "Kalu Ganga"
-  ],
-  "pelmadulla": [
-    "Denawaka Ganga"
-  ],
-  "kalawana": [
-    "Kukule Ganga"
-  ],
-  "kahawaththa": [
-    "Wey Ganga"
-  ],
-  "kahawatta": [
-    "Wey Ganga"
-  ],
-  "elapatha": [
-    "Niriella Ganga",
-    "Kalu Ganga"
-  ],
-  "matara": [
-    "Nilwala Ganga",
-    "Nilwala"
-  ],
-  "bangama": [
-    "Nilwala Ganga",
-    "Nilwala"
-  ],
-  "polothugama": [
-    "Nilwala Ganga",
-    "Nilwala"
-  ],
-  "hulandawa": [
-    "Nilwala Ganga",
-    "Nilwala"
-  ],
-  "warapitiya": [
-    "Nilwala Ganga",
-    "Nilwala"
-  ],
-  "kekiriobada": [
-    "Nilwala Ganga",
-    "Nilwala"
-  ],
-  "peradeniya": [
-    "Mahaweli River"
-  ],
-  "kandy": [
-    "Mahaweli River"
-  ],
-  "gampola": [
-    "Mahaweli River"
-  ],
-  "teldeniya": [
-    "Mahaweli River"
-  ],
-  "katugastota": [
-    "Mahaweli River"
-  ],
-  "chilaw": [
-    "Deduru Oya"
-  ],
-  "kurunegala": [
-    "Deduru Oya"
-  ],
-  "ridibendiella": [
-    "Deduru Oya"
-  ],
-  "sengaloya": [
-    "Deduru Oya"
-  ],
-  "puttalam": [
-    "Mi Oya"
-  ],
-  "wanathawilluwa": [
-    "Mi Oya"
-  ],
-  "pahariya": [
-    "Mi Oya"
-  ],
-  "anuradhapura": [
-    "Malwathu Oya"
-  ],
-  "vavuniya": [
-    "Malwathu Oya"
-  ],
-  "rambewa": [
-    "Malwathu Oya"
-  ],
-  "poonawa": [
-    "Malwathu Oya"
-  ],
-  "trincomalee": [
-    "Yan Oya"
-  ],
-  "habarana": [
-    "Yan Oya"
-  ],
-  "ampara": [
-    "Gal Oya"
-  ],
-  "batticaloa": [
-    "Mundeni Aru",
-    "Magalawattuwan Oya",
-    "Maduru Oya",
-    "Andella Oya"
-  ],
-  "gampaha": [
-    "Uruwal Oya",
-    "Kalu Ela"
-  ],
-  "wattala": [
-    "Kalu Ela"
-  ],
-  "miriswatta": [
-    "Uruwal Oya"
-  ],
-  "badulla": [
-    "Hali Ela"
-  ]
+  "colombo": ["Nagalagam Street"],
+  "kelaniya": ["Nagalagam Street"],
+  "kaduwela": ["Hanwella", "Nagalagam Street"],
+  "hanwella": ["Hanwella"],
+  "mapitigama": ["Kelani Ganga Level at Mapitigama"],
+  "pugoda": ["Kelani Ganga Level at Pugoda"],
+  "ruwanwella": ["Holombuwa", "Deraniyagala"],
+  "avissawella": ["Glencourse"],
+  "wellampitiya": ["Nagalagam Street"],
+  "kolonnawa": ["Nagalagam Street"],
+  "ratnapura": ["Ratnapura", "Rathnapura"],
+  "millakanda": ["Kalawellawa (Millakanda)", "Millakanda"],
+  "putupaula": ["Putupaula"],
+  "kalutara": ["Putupaula"],
+  "kuruvita": ["Rathnapura"],
+  "kuruwita": ["Ratnapura"],
+  "ayagama": ["Ellagawa"],
+  "pelmadulla": ["Ratnapura"],
+  "kalawana": ["Putupaula"],
+  "kahawaththa": ["Ratnapura"],
+  "kahawatta": ["Ratnapura"],
+  "elapatha": ["Ratnapura"],
+  "matara": ["Panadugama", "Pitabeddara"],
+  "bangama": ["Bangama Bridge"],
+  "polothugama": ["Polothugama Bridge"],
+  "hulandawa": ["Hulandawa Bridge"],
+  "warapitiya": ["Kirama Tank Warapitiya"],
+  "kekiriobada": ["Kekiriobada Reservoir"],
+  "peradeniya": ["Mahaweli River Peradeniya", "Peradeniya"],
+  "kandy": ["Mahaweli River Peradeniya", "Peradeniya"],
+  "gampola": ["Peradeniya"],
+  "teldeniya": ["Peradeniya"],
+  "katugastota": ["Peradeniya"],
+  "chilaw": ["Deduru Oya Bridge"],
+  "kurunegala": ["Deduru Oya Bridge", "Ridibendiella Bridge"],
+  "ridibendiella": ["Ridibendiella Bridge"],
+  "sengaloya": ["Sengaloya Anicut Bridge"],
+  "puttalam": ["Puttalam Lagoon", "Puttalam - Anuradhapura Road Mie-Oya Bridge"],
+  "wanathawilluwa": ["Wanathawilluwa Mannar Bridge"],
+  "pahariya": ["Pahariya"],
+  "anuradhapura": ["Eruwewa Spill Cannel"],
+  "vavuniya": ["Boo Oya Bridge, Poonawa, Vavuniya"],
+  "rambewa": ["Weli Oya Junction, Rambewa"],
+  "poonawa": ["Boo Oya Bridge, Poonawa, Vavuniya"],
+  "trincomalee": ["Horowpothana"],
+  "habarana": ["Habarana Wewa - Spill Canal"],
+  "ampara": ["Ampara", "Gal Oya Bridge"],
+  "batticaloa": ["Magalawattuwan Oya", "Andella Oya"],
+  "gampaha": ["Kalu Ela", "Miriswatta Uruwal Oya"],
+  "wattala": ["Wattala Kalu Ela", "Nagalagam Street"],
+  "miriswatta": ["Miriswatta Uruwal Oya"],
+  "badulla": ["Hali-Ela Bridge"]
 }

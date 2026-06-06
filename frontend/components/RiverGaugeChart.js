@@ -131,7 +131,13 @@ const RiverGaugeChart = ({ activeRiver }) => {
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between w-full mb-8 relative z-20">
           <div className="flex flex-col text-white">
             <span className="text-sm md:text-lg opacity-80 uppercase tracking-widest font-normal">Nearest River Station</span>
-            <span className="text-2xl md:text-5xl font-light tracking-tight mt-1">{activeRiver.name}</span>
+            <span className="text-2xl md:text-5xl font-light tracking-tight mt-1">
+              {activeRiver.basin && activeRiver.name && activeRiver.basin !== activeRiver.name
+                ? `${activeRiver.basin} (${activeRiver.name})`
+                : (activeRiver.originalName && activeRiver.city && activeRiver.originalName !== activeRiver.city 
+                  ? `${activeRiver.originalName} (${activeRiver.city})` 
+                  : activeRiver.name)}
+            </span>
           </div>
 
           <div className="flex flex-col items-start md:items-end mt-4 md:mt-0 text-white">

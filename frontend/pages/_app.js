@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
-  const hideFooter = router.pathname === '/ai';
+  const showFooter = ['/', '/landing'].includes(router.pathname);
 
   return (
     <>
@@ -123,7 +123,7 @@ export default function App({ Component, pageProps }) {
       <main className="flex-1">
         <Component {...pageProps} />
       </main>
-      {!hideFooter && <Footer />}
+      {showFooter && <Footer />}
     </div>
   </>
   );

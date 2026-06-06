@@ -227,8 +227,11 @@ exports.getRiversByLocation = async (location) => {
             if (river.name && normalize(river.name) === normSearch) return true;
             if (river.name && normalize(river.name).includes(normSearch)) return true;
             
-            // Match against mapped basins from cityRiverMap.json
-            if (river.basin && normalizedMappedBasins.some(mappedBasin => normalize(river.basin).includes(mappedBasin))) {
+            // Match against mapped basins/stations from cityRiverMap.json
+            if (normalizedMappedBasins.some(mappedBasin => 
+                (river.basin && normalize(river.basin).includes(mappedBasin)) ||
+                (river.name && normalize(river.name).includes(mappedBasin))
+            )) {
                 return true;
             }
             

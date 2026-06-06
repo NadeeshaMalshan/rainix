@@ -25,7 +25,7 @@ export default function LiquidGlassText2D({ text, className = '' }) {
               y="50%" 
               textAnchor="middle" 
               dominantBaseline="middle" 
-              className="text-[17vw] xs:text-[5.5rem] sm:text-[8rem] md:text-[11rem] lg:text-[14rem] xl:text-[16rem] font-normal tracking-tighter"
+              className="text-[25vw] xs:text-[7rem] sm:text-[9rem] md:text-[11rem] lg:text-[14rem] xl:text-[16rem] font-normal tracking-tighter"
               style={{ fontFamily: 'Poppins, sans-serif' }}
               fill="white"
             >
@@ -63,11 +63,11 @@ export default function LiquidGlassText2D({ text, className = '' }) {
           y="50%" 
           textAnchor="middle" 
           dominantBaseline="middle" 
-          className="text-[17vw] xs:text-[5.5rem] sm:text-[8rem] md:text-[11rem] lg:text-[14rem] xl:text-[16rem] font-normal tracking-tighter"
+          className="text-[25vw] xs:text-[7rem] sm:text-[9rem] md:text-[11rem] lg:text-[14rem] xl:text-[16rem] font-normal tracking-tighter"
           style={{ fontFamily: 'Poppins, sans-serif' }}
           fill="rgba(255, 255, 255, 0.1)"
           stroke="rgba(255, 255, 255, 0.4)"
-          strokeWidth="1.5"
+          strokeWidth="0.75"
           filter={`url(#${filterId})`}
         >
           {text}
@@ -76,7 +76,7 @@ export default function LiquidGlassText2D({ text, className = '' }) {
       
       {/* Invisible HTML text to force the container to expand to the exact layout size needed! */}
       <span 
-        className="opacity-0 pointer-events-none text-[17vw] xs:text-[5.5rem] sm:text-[8rem] md:text-[11rem] lg:text-[14rem] xl:text-[16rem] font-normal tracking-tighter px-4 leading-none"
+        className="opacity-0 pointer-events-none text-[25vw] xs:text-[7rem] sm:text-[9rem] md:text-[11rem] lg:text-[14rem] xl:text-[16rem] font-normal tracking-tighter px-4 leading-none"
         style={{ fontFamily: 'Poppins, sans-serif' }}
         aria-hidden="true"
       >
