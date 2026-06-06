@@ -78,7 +78,7 @@ export default function Landing() {
         try {
           const nodeApiUrl = (process.env.NEXT_PUBLIC_NODE_API_URL || "http://localhost:5000").replace(/\/$/, "");
           const [geoRes, riverRes] = await Promise.all([
-            fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=5`).catch(() => null),
+            fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=20`).catch(() => null),
             fetch(`${nodeApiUrl}/api/rivers/search?q=${encodeURIComponent(searchQuery.trim())}`).catch(() => null)
           ]);
           
@@ -92,7 +92,8 @@ export default function Landing() {
           if (geoRes) {
             const geoData = await geoRes.json();
             if (geoData.results) {
-              combined = [...combined, ...geoData.results];
+              const slResults = geoData.results.filter(g => g.country === 'Sri Lanka' || g.country_code === 'LK');
+              combined = [...combined, ...slResults];
             }
           }
           

@@ -28,7 +28,7 @@ interface StationsMapProps {
 
 export default function StationsMap({ stations, activeStationIdx }: StationsMapProps) {
   return (
-    <div className="w-full h-full min-h-[300px] relative z-20">
+    <div className="w-full h-[300px] md:h-[400px] xl:h-full xl:min-h-[300px] relative z-20">
       <MapLayer stations={stations} activeStationIdx={activeStationIdx} />
     </div>
   );
