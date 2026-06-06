@@ -136,34 +136,58 @@ _FINAL_RE = re.compile(r"<final>(.*?)</final>", re.DOTALL | re.IGNORECASE)
 def _extract_thinking_final(text: str):
     if not isinstance(text, str):
         return "", ""
-    f_match = _FINAL_RE.search(text)
-    final = (f_match.group(1).strip() if f_match else "")
-    # Token-optimized: we no longer request/emit chain-of-thought.
-    # If <final> tags are missing, treat entire text as final.
-    if not final:
-        return "", text.strip()
-    return "", final
+
+    thinking = ""
+    t_match = _THINKING_RE.search(text)
+    if t_match:
+        thinking = t_match.group(1).strip()
+
+    final = ""
+    lower = text.lower()
+    f_start = lower.find("<final>")
+    
+    if f_start != -1:
+        f_content = text[f_start + len("<final>"):].strip()
+        f_end = f_content.lower().find("</final>")
+        if f_end != -1:
+            final = f_content[:f_end].strip()
+        else:
+            final = f_content
+    else:
+        if t_match:
+            end_thinking = t_match.end()
+            final = text[end_thinking:].strip()
+        else:
+            final = text.strip()
+
+    return thinking, final
 
 
 def _extract_partials(buffer: str):
-    """Return (thinking_partial, final_partial) for streaming.
-
-    Token-optimized: we do not stream any chain-of-thought, only <final>.
-    """
     if not isinstance(buffer, str) or not buffer:
         return "", ""
 
     lower = buffer.lower()
 
+    thinking = ""
+    t_start = lower.find("<thinking>")
+    t_end = lower.find("</thinking>")
+
+    if t_start != -1:
+        start = t_start + len("<thinking>")
+        end = t_end if t_end != -1 else len(buffer)
+        thinking = buffer[start:end].strip()
+
     final = ""
     f_start = lower.find("<final>")
     f_end = lower.find("</final>")
+
     if f_start != -1:
         start = f_start + len("<final>")
         end = f_end if f_end != -1 else len(buffer)
         final = buffer[start:end].strip()
 
-    return "", final
+    return thinking, final
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -304,6 +328,9 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                         if token:
                             buffer += token
                             thinking, final = _extract_partials(buffer)
+                            if thinking != last_thinking:
+                                last_thinking = thinking
+                                yield "event: thinking\ndata: " + json.dumps({"content": last_thinking}) + "\n\n"
                             if final != last_final:
                                 last_final = final
                                 yield "event: final_partial\ndata: " + json.dumps({"content": last_final}) + "\n\n"
@@ -338,7 +365,7 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
 
                 # Flush final from buffer (if tags present)
                 thinking, final = _extract_thinking_final(buffer)
-                yield "event: done\ndata: " + json.dumps({"thinking": "", "final": final}) + "\n\n"
+                yield "event: done\ndata: " + json.dumps({"thinking": thinking, "final": final}) + "\n\n"
                 return
             except Exception as e:
                 errors[prov_display] = str(e)

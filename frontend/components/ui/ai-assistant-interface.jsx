@@ -1545,8 +1545,19 @@ export function AIAssistantInterface() {
                                 showRiver = hasRivers;
                             } else {
                                 // Default to intent if no explicit words
-                                showWeather = hasWeather;
-                                showRiver = hasRivers;
+                                if (intent === "weather") {
+                                    showWeather = hasWeather;
+                                    showRiver = false;
+                                } else if (intent === "river") {
+                                    showWeather = false;
+                                    showRiver = hasRivers;
+                                } else if (intent === "meteo") {
+                                    showWeather = false;
+                                    showRiver = false;
+                                } else {
+                                    showWeather = hasWeather;
+                                    showRiver = hasRivers;
+                                }
                             }
                             
                             return (
@@ -1741,17 +1752,17 @@ function AIThinkingToggle({ content, defaultExpanded = false }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="w-full flex flex-col items-start mb-2">
+    <div className="w-full flex flex-col items-start mb-2 mt-2">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors bg-neutral-100 dark:bg-zinc-800/80 hover:bg-neutral-200 dark:hover:bg-zinc-700 px-3.5 py-1.5 rounded-full shadow-sm cursor-pointer"
+        className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors bg-neutral-100/50 dark:bg-zinc-800/50 hover:bg-neutral-200 dark:hover:bg-zinc-700/80 px-3 py-1.5 rounded-full shadow-sm cursor-pointer border border-neutral-200/50 dark:border-zinc-800/80"
       >
-       
-        <span>{isExpanded ? "Hide thought process" : "View thought process"}</span>
+        <BrainCircuit className="w-3.5 h-3.5" />
+        <span>Thought process</span>
         {isExpanded ? (
-          <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
+          <ChevronUp className="w-3.5 h-3.5 stroke-[2.5]" />
         ) : (
-          <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+          <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
         )}
       </button>
 
