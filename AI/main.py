@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
+from AI.tools.meteo_tool import get_meteo_alerts
 from langchain_google_genai import (ChatGoogleGenerativeAI)
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
@@ -92,43 +93,37 @@ def location_tool(city: str):
 
     return find_rivers(city)
 
+@tool
+def meteo_tool():
+    """
+    Get official severe weather advisories, public weather forecasts, and marine/shipping forecasts from the Sri Lanka Department of Meteorology.
+    Call this when users ask for official warnings, severe weather, or marine/shipping forecasts.
+    """
+    return get_meteo_alerts()
+
 
 memory = MemorySaver()
 
 agent_prompt = (
-   "You are rainiX AI, an elite real-time weather and river flood safety assistant.\n\n"
-
-"Your mission is to perform comprehensive, high-quality safety assessments. "
-
-"When user ask about the only wheather information, you should call `weather_tool` to get the current weather and precipitation forecast for the city/region."
-
-"When user ask about the only river information, you should call `river_tool` to get the current river levels, historical trends, and alert status for the relevant river(s) near their locations. and predict the trend of river within 5 hours from now using the historical data and weather forecast. Or When users ask the river state in a specific time or day, you should the predict the river level at the time."
-
-"When a user asks about flood risks, river safety, or whether they should worry about a river tonight:\n"
-
-"1. **Identify the Nearby River System**: Use maps, geographic tools, and location analysis to determine the nearest major river, tributary, or flood-prone waterway associated with the user's mentioned town, village, or region.\n"
-
-"2. **Check River Telemetry**: Call `river_tool` for that region/river to get the current level, historical water level readings, river is rising, falling or stable, and alert thresholds (Alert, Minor, Major, Critical).\n"
-
-"3. **Check Weather Forecast**: Call `weather_tool` for the associated city/region to analyze the current weather, precipitation, and specifically the hourly rain/precipitation probability forecast for tonight.\n"
-
-"4. **Analyze the Risk**: Synthesize the two data points: if the river water level is high (near or above Alert/Minor thresholds) AND river status (rising/falling/stable) AND speed of rising/falling AND the forecast predicts heavy rain or high precipitation probability tonight, report an elevated risk. Otherwise, if the weather is clear and levels are normal, reassure the user.\n\n"
-
-"Formatting Rules:\n"
-
-"Don't waste more than 2000 tokens on chain-of-thought. Be concise and to the point. Focus on delivering a clear, actionable, and reassuring final answer.\n"
-
-"- Formulate a friendly, highly professional, and reassuring final response using clear bullet lists and bold text for telemetry details.\n"
-
-"- CRITICAL: If `river_tool` returns multiple telemetry stations/gauges for a basin, you MUST list the current level, thresholds, and status for ALL of them! Do not just summarize the first one.\n"
-
-"- CRITICAL: Even if you are responding in Sinhala or another language, you MUST include the exact English name of the river in your final output (you can put it in brackets). This is strictly required for the UI to display the telemetry cards!\n"
-
-"- If any tool returns empty/null, do not loop or call it repeatedly; state that the specific metric was unavailable and continue with the remaining data."
-
-    "OUTPUT FORMAT (return exactly this, nothing else):\n"
+    "You are rainiX AI, a highly efficient real-time weather and flood safety assistant.\n\n"
+    "CRITICAL TOOL SELECTION RULES (To save tokens, follow exactly):\n"
+    "1. WEATHER ONLY: If asked ONLY about weather, rain, or weather predictions, call `weather_tool` and return ONLY weather information.\n"
+    "2. RIVER ONLY: If asked ONLY about river levels, call `river_tool` and return ONLY river data.\n"
+    "3. FLOODS: If asked about FLOODS or flood risks, call BOTH `river_tool` and `weather_tool`. Compare historical river trends with the weather forecast to provide a calculated flood prediction.\n"
+    "4. DISASTERS/ADVISORIES: If asked about disasters, warnings, or advisories, call `meteo_tool` ONLY to return official alerts. BUT if a disaster prediction is also requested, call `weather_tool` to compare with recent/forecast weather data.\n"
+    "5. CITY STATUS: If asked for the general status of a city, you MUST call ALL THREE tools: `weather_tool`, `river_tool` (for nearby river stations, or you can get by latitude/longitude), and `meteo_tool`. Synthesize all three into a single cohesive report.\n"
+    "6. FUTURE PREDICTIONS : If the user asks to predict future weather, river levels, or disasters, you MUST deeply analyze past weather patterns, historical river trends, and past meteo data. Combine these historical datasets with current forecasts to mathematically calculate and provide a highly accurate prediction.\n\n"
+    "FORMATTING & SAFETY RULES:\n"
+    "- Token Optimization: Be extremely concise. Do not waste tokens on unnecessary fluff.\n"
+    "- If `river_tool` returns multiple stations, list the current level, thresholds, and status for ALL of them.\n"
+    "- Even if replying in Sinhala, include the exact English name of the river in your final output so the UI can display telemetry cards.\n"
+    "- If a tool returns null/empty, just state the data is unavailable and proceed.\n\n"
+    "OUTPUT FORMAT (You MUST include both <thinking> and <final> blocks):\n"
+    "<thinking>\n"
+    "Briefly explain which condition applies and what tools you are choosing. Keep it short to save tokens.\n"
+    "</thinking>\n"
     "<final>\n"
-    "Write the user-facing answer here.\n"
+    "Write the concise, user-facing answer here.\n"
     "</final>\n"
 )
 
@@ -175,7 +170,7 @@ def _extract_partials(buffer: str):
 # Build agents for each (key, model) combination
 # agents_by_key[key_label][model_name] = agent
 # ──────────────────────────────────────────────────────────────────────
-tools_list = [weather_tool, river_tool, location_tool]
+tools_list = [weather_tool, river_tool, location_tool, meteo_tool]
 
 agents_by_key = {}
 for key_label, llms in key_llms.items():
@@ -331,6 +326,9 @@ async def chat_stream(q: str, session_id: str = "default", provider: str = "goog
                             yield "event: detected_intent\ndata: " + json.dumps({"intent": "river"}) + "\n\n"
                         elif name == "location_tool":
                             display_name = "Finding nearby water sources..."
+                        elif name == "meteo_tool":
+                            display_name = "Checking official meteorological advisories..."
+                            yield "event: detected_intent\ndata: " + json.dumps({"intent": "meteo"}) + "\n\n"
                         else:
                             display_name= "Working on a task..."
                         yield "event: status\ndata: " + json.dumps({"content": display_name}) + "\n\n"
@@ -385,6 +383,7 @@ class RiverPredictionRequest(BaseModel):
     river_name: str
     historical_data: List[Dict[str, Any]]
     weather_data: Optional[Dict[str, Any]] = None
+    
 
 @app.post("/api/predict/river")
 async def predict_river_level(req: RiverPredictionRequest):
@@ -415,7 +414,7 @@ You are an expert hydrological AI. Your task is to predict the water level of {r
 Use the following real-time data:
 1. Current Level: {current_level}m
 2. Recent History (last {len(recent_history)} points): [{history_str}]
-3. Weather Context: {weather_str}
+3. Weather Context: {weather_str} and history of weather
 
 Analyze the rate of change in the history and the expected rainfall.
 IMPORTANT: You MUST return ONLY a raw JSON object with NO markdown formatting, NO backticks, and NO explanations.
