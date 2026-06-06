@@ -21,3 +21,45 @@ exports.getMeteoContent = async (req, res) => {
     });
   }
 };
+
+const pdfParse = require('pdf-parse');
+
+exports.getPdfText = async (req, res) => {
+  try {
+    const { path } = req.query;
+    if (!path) {
+      return res.status(400).json({ success: false, message: "Missing 'path' query parameter" });
+    }
+
+    // Clean up path if it already contains the base url
+    let pdfUrl = path;
+    if (!path.startsWith('http')) {
+      // Remove leading slash if present to avoid double slash
+      const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+      pdfUrl = `https://meteo.gov.lk/${cleanPath}`;
+    }
+
+    const response = await fetch(pdfUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    const data = await pdfParse(buffer);
+    
+    res.json({
+      success: true,
+      text: data.text
+    });
+
+  } catch (error) {
+    console.error("Error fetching or parsing PDF:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to parse PDF",
+      error: error.message
+    });
+  }
+};
