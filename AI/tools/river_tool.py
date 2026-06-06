@@ -1,6 +1,8 @@
 import requests
 import os
+from cachetools import cached, TTLCache
 
+@cached(cache=TTLCache(maxsize=100, ttl=600))
 def get_river_alerts(location, is_basin=False):
     try:
         node_api_url = os.getenv("NODE_API_URL", "http://localhost:5000").rstrip("/")

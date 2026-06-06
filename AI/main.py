@@ -38,6 +38,7 @@ GOOGLE_API_KEYS = {
 
 
 MODEL_CONFIGS = [
+    {"name": "pro",     "model": "gemini-3.1-pro",      "label": "Gemini 3.1 Pro"},
     {"name": "google",  "model": "gemini-3.5-flash",    "label": "Gemini 3.5 Flash"},
     {"name": "gem3",    "model": "gemini-3.1-flash-lite","label": "Gemini 3.1 Lite"},
     {"name": "gemma",   "model": "gemma-4-31b-it",      "label": "Gemma 4 (31B)"},
@@ -424,7 +425,17 @@ async def predict_river_level(req: RiverPredictionRequest):
             
         # Format the data for the LLM
         recent_history = req.historical_data[-60:] # Last hour if 1pt/min
-        history_str = ", ".join([str(p.get("y")) for p in recent_history if p.get("y") is not None])
+        valid_history = [p.get("y") for p in recent_history if p.get("y") is not None]
+        history_str = ", ".join(map(str, valid_history))
+        
+        # Calculate simple linear trend (slope) over the recent history
+        trend_slope = 0.0
+        if len(valid_history) > 1:
+            trend_slope = (valid_history[-1] - valid_history[0]) / len(valid_history)
+        
+        # Extrapolate for 3 hours (assuming 1 pt/min, 180 points)
+        math_predicted_level = current_level + (trend_slope * 180)
+        math_predicted_level = round(math_predicted_level, 2)
         
         weather_str = "No specific weather data available."
         if req.weather_data:
@@ -440,10 +451,11 @@ async def predict_river_level(req: RiverPredictionRequest):
 You are an expert hydrological AI. Your task is to predict the water level of {req.river_name} EXACTLY 3 hours from now.
 Use the following real-time data:
 1. Current Level: {current_level}m
-2. Recent History (last {len(recent_history)} points): [{history_str}]
-3. Weather Context: {weather_str} and history of weather
+2. Recent History (last {len(valid_history)} points): [{history_str}]
+3. Calculated Math Trend (Base Prediction): {math_predicted_level}m (assuming current rate continues)
+4. Weather Context: {weather_str}
 
-Analyze the rate of change in the history and the expected rainfall.
+Analyze the Calculated Math Trend and adjust it based on the expected rainfall. If heavy rain is expected, adjust the level higher. If no rain, keep it close to the math trend.
 IMPORTANT: You MUST return ONLY a raw JSON object with NO markdown formatting, NO backticks, and NO explanations.
 Format:
 {{"predicted_level": 5.45}}
@@ -454,8 +466,31 @@ Format:
         if not available_keys:
             return {"predicted_level": None, "error": "No AI providers available"}
             
-        llm = key_llms[available_keys[0]]["google"] # Default to Gemini Flash
-        response = await llm.ainvoke(prompt)
+        response = None
+        
+        # 1. Try Gemini 3.1 Pro on all available keys
+        for key in available_keys:
+            try:
+                llm = key_llms[key]["pro"]
+                response = await llm.ainvoke(prompt)
+                break # Success
+            except Exception as e:
+                print(f"Gemini 3.1 Pro failed on Key {key}: {e}")
+                
+        # 2. If all Pro attempts failed, try Gemma 4 on all keys
+        if response is None:
+            print("All Gemini 3.1 Pro keys failed. Switching to Gemma 4...")
+            for key in available_keys:
+                try:
+                    llm = key_llms[key]["gemma"]
+                    response = await llm.ainvoke(prompt)
+                    break # Success
+                except Exception as e2:
+                    print(f"Gemma 4 failed on Key {key}: {e2}")
+
+        if response is None:
+            return {"predicted_level": current_level, "error": "All AI models and keys failed"}
+            
         content = response.content.strip()
         
         # Clean up any markdown code blocks the LLM might have ignored instructions and added

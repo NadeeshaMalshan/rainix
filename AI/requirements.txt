@@ -8,3 +8,4 @@ langchain-google-genai
 langgraph
 google-generativeai
 langsmith
+cachetools

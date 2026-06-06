@@ -1,6 +1,8 @@
 import os
 import requests
+from cachetools import cached, TTLCache
 
+@cached(cache=TTLCache(maxsize=10, ttl=600))
 def get_meteo_alerts():
     try:
         node_api_url = os.getenv("NODE_API_URL", "http://localhost:5000").rstrip("/")
