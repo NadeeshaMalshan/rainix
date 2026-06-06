@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
-from AI.tools.meteo_tool import get_meteo_alerts
+from tools.meteo_tool import get_meteo_alerts
 from langchain_google_genai import (ChatGoogleGenerativeAI)
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
