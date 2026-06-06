@@ -1757,7 +1757,6 @@ function AIThinkingToggle({ content, defaultExpanded = false }) {
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors bg-neutral-100/50 dark:bg-zinc-800/50 hover:bg-neutral-200 dark:hover:bg-zinc-700/80 px-3 py-1.5 rounded-full shadow-sm cursor-pointer border border-neutral-200/50 dark:border-zinc-800/80"
       >
-        <BrainCircuit className="w-3.5 h-3.5" />
         <span>Thought process</span>
         {isExpanded ? (
           <ChevronUp className="w-3.5 h-3.5 stroke-[2.5]" />

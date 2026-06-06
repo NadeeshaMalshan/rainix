@@ -25,8 +25,8 @@ export default function WeatherDashboard() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
-  const [isStickyFocused, setIsStickyFocused] = useState(false);
   const [showStickyNav, setShowStickyNav] = useState(false);
+  const [isMobileSearchExpanded, setIsMobileSearchExpanded] = useState(false);
   const locationRef = useRef(null);
   const [savedLocationsWeather, setSavedLocationsWeather] = useState({
     'Tokyo, JP': { temp: '19°', status: 'Clear Conditions', style: 'sunny' },
@@ -437,35 +437,55 @@ export default function WeatherDashboard() {
       
       {/* Sticky Navigation Bar */}
       <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${showStickyNav ? 'translate-y-0' : '-translate-y-full'} ${isLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        <div className="deep-frosted-pill w-full p-2 px-4 md:px-8 border-x-0 border-t-0 shadow-glass flex items-center justify-between gap-4">
-          <div className={`flex items-center gap-3 ${textColorClass}`}>
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 shadow-inner">
-              <span className="material-symbols-outlined text-2xl">{weatherCondition.icon}</span>
+        <div className="deep-frosted-pill w-full p-2 px-3 md:px-8 border-x-0 border-t-0 shadow-glass flex items-center justify-between gap-2 md:gap-4 transition-all duration-300">
+          <div className={`flex items-center gap-2 sm:gap-3 ${textColorClass} shrink-0 transition-opacity duration-300 ${isMobileSearchExpanded ? 'hidden md:flex' : 'flex'}`}>
+            <div className="flex shrink-0 items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/10 shadow-inner">
+              <span className="material-symbols-outlined text-xl md:text-2xl">{weatherCondition.icon}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-xl md:text-2xl font-bold leading-tight">{Math.round(currentTemp)}°</span>
             </div>
-            <div className="hidden sm:flex flex-col ml-1 border-l border-white/20 pl-4">
+            <div className="flex flex-col ml-1 sm:ml-2 border-l border-white/20 pl-3 md:pl-4">
               <span className="text-sm md:text-base font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-[200px]">{formattedCity}</span>
               <span className="text-[10px] md:text-xs opacity-70 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-[200px]">{formattedCountry}</span>
             </div>
           </div>
-          <div className="flex-1 max-w-sm md:max-w-md ml-auto flex items-center gap-2">
-            <div className="flex-1 min-w-0 relative">
-              <div className="deep-frosted-pill w-full h-10 md:h-11 rounded-full flex items-center pr-1.5 pl-3 md:pl-4 hover:bg-white/25 focus-within:bg-white/25 focus-within:ring-1 ring-white/30 transition-all">
+          <div className={`transition-all duration-300 ml-auto flex items-center gap-2 ${isMobileSearchExpanded ? 'flex-1 max-w-full' : 'flex-none md:flex-1 max-w-sm md:max-w-md'}`}>
+            <div className={`relative ${isMobileSearchExpanded ? 'flex-1 min-w-0' : 'w-10 h-10 md:w-full md:h-auto md:flex-1 md:min-w-0'}`}>
+              <div 
+                className={`deep-frosted-pill h-10 md:h-11 rounded-full flex items-center transition-all ${isMobileSearchExpanded ? 'w-full pr-1.5 pl-3 md:pl-4 hover:bg-white/25 focus-within:bg-white/25 focus-within:ring-1 ring-white/30' : 'w-10 h-10 md:w-full justify-center md:justify-start md:pr-1.5 md:pl-4 md:hover:bg-white/25 md:focus-within:bg-white/25 md:focus-within:ring-1 md:ring-white/30 cursor-pointer md:cursor-auto'} hover:bg-white/25`}
+                onClick={() => !isMobileSearchExpanded && window.innerWidth < 768 && setIsMobileSearchExpanded(true)}
+              >
                 <input 
-                  className={`flex-1 min-w-0 bg-transparent border-none text-sm md:text-base ${textColorClass} placeholder:${textColorClass} placeholder:opacity-60 outline-none`}
+                  className={`w-full flex-1 min-w-0 bg-transparent border-none text-sm md:text-base ${textColorClass} placeholder:${textColorClass} placeholder:opacity-60 outline-none ${isMobileSearchExpanded ? 'block' : 'hidden md:block'}`}
                   placeholder="Search City or River..." 
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsStickyFocused(true)}
-                  onBlur={() => setTimeout(() => setIsStickyFocused(false), 250)}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setIsStickyFocused(false);
+                      setIsMobileSearchExpanded(false);
+                    }, 250);
+                  }}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(searchQuery); }}
+                  ref={(input) => {
+                    if (isMobileSearchExpanded && input) {
+                      input.focus();
+                    }
+                  }}
                 />
                 <button 
-                  onClick={() => handleSearchSubmit(searchQuery)}
-                  className={`p-1 md:p-1.5 rounded-full hover:bg-white/30 transition-colors ${textColorClass} flex items-center justify-center`}
+                  onClick={(e) => {
+                    if (isMobileSearchExpanded || window.innerWidth >= 768) {
+                      handleSearchSubmit(searchQuery);
+                    } else {
+                      e.preventDefault();
+                      setIsMobileSearchExpanded(true);
+                    }
+                  }}
+                  className={`rounded-full hover:bg-white/30 transition-colors ${textColorClass} flex items-center justify-center ${isMobileSearchExpanded ? 'p-1 md:p-1.5' : 'w-full h-full md:p-1.5 md:w-auto md:h-auto'}`}
                 >
                   <span className="material-symbols-outlined text-lg md:text-xl">search</span>
                 </button>
@@ -679,16 +699,16 @@ export default function WeatherDashboard() {
         className={`font-poppins overflow-x-hidden overflow-y-auto custom-scrollbar w-full max-w-full min-h-screen relative flex flex-col justify-between select-none transition-all duration-1000 pb-12 ${textColorClass}`}
         style={{ background: getBackgroundGradient(weatherState) }}
       >
-        {weatherState === 'thunderstorm' && <div className="lightning-overlay animate-lightning bg-white absolute inset-0 z-40" />}
+        {weatherState === 'thunderstorm' && <div className="lightning-overlay animate-lightning bg-white fixed inset-0 z-40 pointer-events-none" />}
         {['clear_night', 'partly_cloudy_night'].includes(weatherState) && (
-          <div className="star-container absolute inset-0 pointer-events-none z-0">
+          <div className="star-container fixed inset-0 pointer-events-none z-0">
             {Array.from({ length: 45 }).map((_, i) => (
               <div key={i} className="star-particle animate-star absolute bg-white rounded-full" style={{ width: `${Math.random() * 2 + 1}px`, height: `${Math.random() * 2 + 1}px`, left: `${Math.random() * 100}%`, top: `${Math.random() * 65}%`, animationDuration: `${0.8 + Math.random() * 1.8}s`, animationDelay: `${Math.random() * -2}s` }} />
             ))}
           </div>
         )}
 
-        <div ref={celestialRef} className={`absolute z-10 pointer-events-none animate-pop-in ${isLoading || ['cloudy', 'thunderstorm', 'rainy', 'snow'].includes(weatherState) ? 'hidden' : ''}`} style={{ left: `${orbit.x}%`, top: `${orbit.y}%` }}>
+        <div ref={celestialRef} className={`fixed z-10 pointer-events-none animate-pop-in ${isLoading || ['cloudy', 'thunderstorm', 'rainy', 'snow'].includes(weatherState) ? 'hidden' : ''}`} style={{ left: `${orbit.x}%`, top: `${orbit.y}%` }}>
           {orbit.isNight ? (
             <img src="/images/moon.png" alt="Moon" className="w-32 h-32 md:w-56 md:h-56 object-contain" />
           ) : (
@@ -697,7 +717,7 @@ export default function WeatherDashboard() {
         </div>
 
         {cloudConfig.count > 0 && (
-          <div className="cloud-container absolute inset-0 pointer-events-none z-20">
+          <div className="cloud-container fixed inset-0 pointer-events-none z-20">
             {Array.from({ length: cloudConfig.count }).map((_, i) => {
               const sizes = [ 
                 { w: 'w-64 md:w-[32rem]', h: 'h-32 md:h-[16rem]', top: '5%' }, 
@@ -718,7 +738,7 @@ export default function WeatherDashboard() {
         )}
 
         {['rainy', 'thunderstorm'].includes(weatherState) && (
-          <div className="rain-container absolute inset-0 pointer-events-none z-20">
+          <div className="rain-container fixed inset-0 pointer-events-none z-20">
             {Array.from({ length: 180 }).map((_, i) => (
               <div key={i} className="rain-drop animate-rain absolute bg-sky-200/60 w-[2px] h-8 rounded" style={{ left: `${Math.random() * 100}%`, top: `-40px`, animationDuration: `${0.45 + Math.random() * 0.3}s`, animationDelay: `${Math.random() * -1.5}s`, opacity: Math.random() * 0.4 + 0.3 }} />
             ))}
@@ -726,7 +746,7 @@ export default function WeatherDashboard() {
         )}
 
         {weatherState === 'snow' && (
-          <div className="snow-container absolute inset-0 pointer-events-none z-20">
+          <div className="snow-container fixed inset-0 pointer-events-none z-20">
             {Array.from({ length: 45 }).map((_, i) => (
               <div key={i} className="snowflake animate-snow absolute bg-white rounded-full" style={{ width: `${Math.random() * 6 + 4}px`, height: `${Math.random() * 6 + 4}px`, left: `${Math.random() * 100}%`, top: `-20px`, animationDuration: `${4.5 + Math.random() * 3.5}s`, animationDelay: `${Math.random() * -8}s` }} />
             ))}

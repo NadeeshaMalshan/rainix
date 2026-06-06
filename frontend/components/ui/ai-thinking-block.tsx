@@ -70,42 +70,32 @@ export default function AIThinkingBlock({ content, isLive = false }: AIThinkingB
   return (
     <>
       <div className="flex flex-col p-3 w-full max-w-xl">
-        <div className="flex items-center justify-start gap-2 mb-4">
-          {isLive ? (
-            <>
-              <Loader size={"sm"} variant="muted" />
-              <p
-                className="bg-[linear-gradient(110deg,#6b7280,35%,#fff,50%,#6b7280,75%,#6b7280)] bg-[length:200%_100%] bg-clip-text text-base text-transparent animate-[shimmer_5s_linear_infinite]"
-                style={{
-                  animation: "shimmer 5s linear infinite",
-                }}
-              >
-                {content && content.trim() ? "Thinking…" : "Working…"}
-              </p>
-              <span className="text-sm text-muted-foreground">
-                {timer}s
-              </span>
-            </>
-          ) : (
-            <>
-              
-              <p className="text-base text-neutral-500 dark:text-neutral-400 font-semibold">
-                Thought process
-              </p>
-            </>
-          )}
-          
-          <style jsx>{`
-            @keyframes shimmer {
-              0% {
-                background-position: 200% 0;
+        {isLive && (
+          <div className="flex items-center justify-start gap-2 mb-4">
+            <Loader size={"sm"} variant="muted" />
+            <p
+              className="bg-[linear-gradient(110deg,#6b7280,35%,#fff,50%,#6b7280,75%,#6b7280)] bg-[length:200%_100%] bg-clip-text text-base text-transparent animate-[shimmer_5s_linear_infinite]"
+              style={{
+                animation: "shimmer 5s linear infinite",
+              }}
+            >
+              {content && content.trim() ? "Thinking…" : "Working…"}
+            </p>
+            <span className="text-sm text-muted-foreground">
+              {timer}s
+            </span>
+            <style jsx>{`
+              @keyframes shimmer {
+                0% {
+                  background-position: 200% 0;
+                }
+                100% {
+                  background-position: -200% 0;
+                }
               }
-              100% {
-                background-position: -200% 0;
-              }
-            }
-          `}</style>
-        </div>
+            `}</style>
+          </div>
+        )}
         <Card className="bg-neutral-50 dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 p-4 rounded-xl overflow-visible">
           {rendered ? <div className="text-sm leading-relaxed">{rendered}</div> : (
             <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
