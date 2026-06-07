@@ -9,3 +9,5 @@ const {
 router.get('/:alerts', getAlerts);
 
 module.exports = router;
+
+//test
