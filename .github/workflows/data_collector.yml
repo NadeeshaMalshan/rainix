@@ -39,7 +39,7 @@ jobs:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: |
           cd AI
-          node dataset_collector.js --init
+          node dataset_collector.mjs --init
 
       - name: Run Collector (Current Data)
         if: ${{ github.event.inputs.init_data != 'true' }}
@@ -49,4 +49,4 @@ jobs:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: |
           cd AI
-          node dataset_collector.js
+          node dataset_collector.mjs

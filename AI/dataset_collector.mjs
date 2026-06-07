@@ -1,6 +1,6 @@
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
-const axios = require('axios');
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { JWT } from 'google-auth-library';
+import axios from 'axios';
 
 // ==== CONFIGURATION ====
 // Credentials env variables (GitHub Secrets walin enawa)
