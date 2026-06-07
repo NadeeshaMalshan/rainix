@@ -28,7 +28,8 @@ function getSLTime(dateInput) {
     const d = new Date(dateInput);
     // Add 5.5 hours to UTC to get Sri Lanka time
     const slTime = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
-    return slTime.toISOString().substring(0, 19) + '+05:30';
+    // Return a plain text date so Google Sheets doesn't double-add the timezone
+    return slTime.toISOString().substring(0, 19).replace('T', ' ');
 }
 
 async function getWeatherData(startDate, endDate) {
@@ -43,7 +44,7 @@ async function getWeatherData(startDate, endDate) {
 }
 
 async function getRivernetData(startSec, endSec) {
-    const rawPath = `api/reports/river-level/chart/minute/${startSec}/${endSec}?keys=${RIVERNET_DEVICE_KEY}&last24HoursData=1&isPublic=1`;
+    const rawPath = `api/reports/river-level/chart/minute/${startSec}/${endSec}?keys=${RIVERNET_DEVICE_KEY}&isPublic=1`;
     const url = `https://api.rivernet.lk/cache-api.php?path=${encodeURIComponent(rawPath)}`;
     try {
         const res = await axios.get(url);
@@ -69,17 +70,17 @@ async function initSheet() {
     return sheet;
 }
 
-async function collectPast24Hours(sheet) {
-    console.log("Fetching exact past 24 hours REAL data from Rivernet...");
+async function collectPast72Hours(sheet) {
+    console.log("Fetching exact past 72 hours REAL data from Rivernet...");
     const now = new Date();
-    const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    const pastDays = new Date(now.getTime() - (72 * 60 * 60 * 1000));
     
-    const startDate = yesterday.toISOString().split('T')[0];
+    const startDate = pastDays.toISOString().split('T')[0];
     const endDate = now.toISOString().split('T')[0];
 
     const weatherData = await getWeatherData(startDate, endDate);
     
-    const startSec = Math.floor(yesterday.getTime() / 1000);
+    const startSec = Math.floor(pastDays.getTime() / 1000);
     const endSec = Math.floor(now.getTime() / 1000);
     const riverData = await getRivernetData(startSec, endSec);
     
@@ -159,7 +160,7 @@ async function main() {
     const sheet = await initSheet();
 
     if (process.argv.includes('--init')) {
-        await collectPast24Hours(sheet);
+        await collectPast72Hours(sheet);
     } else {
         await collectCurrentData(sheet);
     }
