@@ -33,7 +33,7 @@ function getSLTime(dateInput) {
 }
 
 async function getWeatherData(startDate, endDate) {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation&start_date=${startDate}&end_date=${endDate}`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation&start_date=${startDate}&end_date=${endDate}&timezone=Asia%2FColombo`;
     try {
         const response = await axios.get(url);
         return response.data.hourly;
@@ -114,8 +114,10 @@ async function collectPast24Hours(sheet) {
                  rain = weatherData.precipitation[weatherIndex];
              }
              
+             // Rivernet API 'x' is already shifted to local time despite being UNIX epoch.
+             // So dataTime.toISOString() is actually local Sri Lanka time!
              rows.push({
-                 Timestamp: getSLTime(dataTime),
+                 Timestamp: dataTime.toISOString().substring(0, 19).replace('T', ' '),
                  Temperature_C: temp,
                  Rainfall_mm: rain,
                  River_Level_m: riverRow.y,
@@ -143,8 +145,9 @@ async function collectCurrentData(sheet) {
         // Get the very last recorded river level
         const latestRiver = riverData[riverData.length - 1].y;
 
-        const currentUtcStr = new Date().toISOString().substring(0, 13) + ":00";
-        const wIndex = weatherData.time.indexOf(currentUtcStr);
+        const slTimeStr = getSLTime(new Date()); // "YYYY-MM-DD HH:mm:ss"
+        const currentSLThourStr = slTimeStr.replace(' ', 'T').substring(0, 13) + ":00";
+        const wIndex = weatherData.time.indexOf(currentSLThourStr);
         
         const temp = wIndex !== -1 ? weatherData.temperature_2m[wIndex] : null;
         const rain = wIndex !== -1 ? weatherData.precipitation[wIndex] : null;
