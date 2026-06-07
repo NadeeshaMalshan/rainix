@@ -66,6 +66,13 @@ async function initSheet() {
             headerValues: ['Timestamp', 'Temperature_C', 'Rainfall_mm', 'River_Level_m', 'Type'], 
             title: 'Kalu_Ganga_Data' 
         });
+    } else {
+        try {
+            await sheet.loadHeaderRow();
+        } catch (e) {
+            console.log("Headers missing! Re-adding headers automatically...");
+            await sheet.setHeaderRow(['Timestamp', 'Temperature_C', 'Rainfall_mm', 'River_Level_m', 'Type']);
+        }
     }
     return sheet;
 }
