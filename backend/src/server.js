@@ -11,6 +11,7 @@ const cityRoutes = require('./routes/cityRoutes');
 const regionRoutes = require("./routes/regionRoutes");
 const radarRoutes = require("./routes/radarRoutes");
 const meteoRoutes = require("./routes/meteoRoutes");
+const collectRoutes = require("./routes/collectRoutes");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use("/api/city", cityRoutes);
 app.use("/api/regions", regionRoutes);
 app.use("/api/radar", radarRoutes);
 app.use("/api/meteo", meteoRoutes);
+app.use("/api/collect", collectRoutes);
 app.use(express.json());
 
 app.get('/', (req, res) => {

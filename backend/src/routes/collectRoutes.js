@@ -1,10 +1,10 @@
+const express = require('express');
+const router = express.Router();
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const axios = require('axios');
 
-// Vercel eke Environment Variables widihata me details danna
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-// Vercel eke private key eka daddi \n escape wena nisa replace karanawa
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : '';
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
@@ -26,12 +26,7 @@ async function getRiverLevel() {
     return (Math.random() * (5.0 - 2.0) + 2.0).toFixed(2);
 }
 
-export default async function handler(req, res) {
-    // Vercel Cron call eka authorize karanna oni nam (optional):
-    // if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
-    //     return res.status(401).end('Unauthorized');
-    // }
-
+router.get('/', async (req, res) => {
     try {
         const serviceAccountAuth = new JWT({
             email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -75,4 +70,6 @@ export default async function handler(req, res) {
         console.error(error);
         return res.status(500).json({ success: false, error: error.message });
     }
-}
+});
+
+module.exports = router;
