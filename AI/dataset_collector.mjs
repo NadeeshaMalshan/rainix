@@ -3,14 +3,13 @@ import { JWT } from 'google-auth-library';
 import axios from 'axios';
 
 // ==== CONFIGURATION ====
-// Credentials env variables (GitHub Secrets walin enawa)
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : '';
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
-// Ratnapura Coordinates
 const LAT = 6.6828;
 const LON = 80.3992;
+const RIVERNET_DEVICE_KEY = '2bq292rf6uz'; // Ratnapura, Kalu Ganga
 
 if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !SPREADSHEET_ID) {
     console.error("Missing credentials in environment variables!");
@@ -25,6 +24,13 @@ const serviceAccountAuth = new JWT({
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
 
+function getSLTime(dateInput) {
+    const d = new Date(dateInput);
+    // Add 5.5 hours to UTC to get Sri Lanka time
+    const slTime = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+    return slTime.toISOString().substring(0, 19) + '+05:30';
+}
+
 async function getWeatherData(startDate, endDate) {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation&start_date=${startDate}&end_date=${endDate}`;
     try {
@@ -36,8 +42,19 @@ async function getWeatherData(startDate, endDate) {
     }
 }
 
-async function getRiverLevel() {
-    return (Math.random() * (5.0 - 2.0) + 2.0).toFixed(2);
+async function getRivernetData(startSec, endSec) {
+    const rawPath = `api/reports/river-level/chart/minute/${startSec}/${endSec}?keys=${RIVERNET_DEVICE_KEY}&last24HoursData=1&isPublic=1`;
+    const url = `https://api.rivernet.lk/cache-api.php?path=${encodeURIComponent(rawPath)}`;
+    try {
+        const res = await axios.get(url);
+        if (res.data && res.data.results && res.data.results.chartData && res.data.results.chartData.length > 0) {
+             return res.data.results.chartData[0].data; // array of {y, x, t}
+        }
+        return [];
+    } catch (err) {
+        console.error("Rivernet API Error:", err.message);
+        return [];
+    }
 }
 
 async function initSheet() {
@@ -53,7 +70,7 @@ async function initSheet() {
 }
 
 async function collectPast24Hours(sheet) {
-    console.log("Fetching exact past 24 hours data...");
+    console.log("Fetching exact past 24 hours REAL data from Rivernet...");
     const now = new Date();
     const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
     
@@ -62,58 +79,78 @@ async function collectPast24Hours(sheet) {
 
     const weatherData = await getWeatherData(startDate, endDate);
     
-    if(weatherData) {
+    const startSec = Math.floor(yesterday.getTime() / 1000);
+    const endSec = Math.floor(now.getTime() / 1000);
+    const riverData = await getRivernetData(startSec, endSec);
+    
+    if(weatherData && riverData.length > 0) {
         const rows = [];
-        for(let i=0; i<weatherData.time.length; i++) {
-            const dataTime = new Date(weatherData.time[i]);
-            
-            // Check if the hourly data is within the past 24 hours window
-            if (dataTime >= yesterday && dataTime <= now) {
-                const temp = weatherData.temperature_2m[i];
-                const rain = weatherData.precipitation[i];
-                
-                for(let j=0; j<12; j++) {
-                    const localTime = new Date(weatherData.time[i]);
-                    localTime.setMinutes(localTime.getMinutes() + (j * 5));
-                    
-                    // Ensure the 5-min chunk is also within the past 24 hours
-                    if (localTime >= yesterday && localTime <= now) {
-                        const mockRiverLevel = await getRiverLevel(); 
-                        rows.push({
-                            Timestamp: localTime.toISOString(),
-                            Temperature_C: temp,
-                            Rainfall_mm: rain,
-                            River_Level_m: mockRiverLevel,
-                            Type: 'Historical'
-                        });
-                    }
-                }
-            }
+        
+        // Filter rivernet minute-by-minute data to only keep every 5th minute
+        const filteredRiverData = riverData.filter(d => {
+             const t = new Date(d.x);
+             return t.getMinutes() % 5 === 0;
+        });
+
+        for (const riverRow of filteredRiverData) {
+             const dataTime = new Date(riverRow.x);
+             
+             // Find matching hourly weather (UTC time string match e.g. "2026-06-06T12:00")
+             const hourString = dataTime.toISOString().substring(0, 13) + ":00";
+             const weatherIndex = weatherData.time.indexOf(hourString);
+             
+             let temp = null;
+             let rain = null;
+             if (weatherIndex !== -1) {
+                 temp = weatherData.temperature_2m[weatherIndex];
+                 rain = weatherData.precipitation[weatherIndex];
+             }
+             
+             rows.push({
+                 Timestamp: getSLTime(dataTime),
+                 Temperature_C: temp,
+                 Rainfall_mm: rain,
+                 River_Level_m: riverRow.y,
+                 Type: 'Historical'
+             });
         }
+        
         await sheet.addRows(rows);
-        console.log("Exact past 24 hours data saved to Google Sheets (5-minute intervals).");
+        console.log(`Saved ${rows.length} rows of real data to Google Sheets (5-minute intervals).`);
+    } else {
+        console.error("Failed to fetch data from APIs.");
     }
 }
 
 async function collectCurrentData(sheet) {
-    console.log(`[${new Date().toISOString()}] Collecting current data...`);
+    console.log(`[${new Date().toISOString()}] Collecting current REAL data...`);
     const today = new Date().toISOString().split('T')[0];
     const weatherData = await getWeatherData(today, today);
     
-    if(weatherData) {
-        const currentHour = new Date().getHours();
-        const temp = weatherData.temperature_2m[currentHour];
-        const rain = weatherData.precipitation[currentHour];
-        const riverLvl = await getRiverLevel();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const pastSec = nowSec - 3600; // Look back 1 hour to get the latest point safely
+    const riverData = await getRivernetData(pastSec, nowSec);
+    
+    if(weatherData && riverData && riverData.length > 0) {
+        // Get the very last recorded river level
+        const latestRiver = riverData[riverData.length - 1].y;
+
+        const currentUtcStr = new Date().toISOString().substring(0, 13) + ":00";
+        const wIndex = weatherData.time.indexOf(currentUtcStr);
+        
+        const temp = wIndex !== -1 ? weatherData.temperature_2m[wIndex] : null;
+        const rain = wIndex !== -1 ? weatherData.precipitation[wIndex] : null;
 
         await sheet.addRow({
-            Timestamp: new Date().toISOString(),
+            Timestamp: getSLTime(new Date()),
             Temperature_C: temp,
             Rainfall_mm: rain,
-            River_Level_m: riverLvl,
+            River_Level_m: latestRiver,
             Type: 'Real-Time'
         });
-        console.log("Current data row added to Google Sheet.");
+        console.log(`[${getSLTime(new Date())}] Current REAL data row added to Google Sheet.`);
+    } else {
+        console.error("Failed to fetch current real data.");
     }
 }
 
@@ -121,7 +158,6 @@ async function main() {
     console.log("Starting Kalu Ganga Dataset Collector...");
     const sheet = await initSheet();
 
-    // '--init' command line argument eka dunnoth iye data gannawa, nathnam dan welawe data gannawa
     if (process.argv.includes('--init')) {
         await collectPast24Hours(sheet);
     } else {
