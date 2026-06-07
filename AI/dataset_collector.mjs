@@ -25,8 +25,8 @@ const serviceAccountAuth = new JWT({
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
 
-async function getWeatherData(dateStr) {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation&start_date=${dateStr}&end_date=${dateStr}`;
+async function getWeatherData(startDate, endDate) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation&start_date=${startDate}&end_date=${endDate}`;
     try {
         const response = await axios.get(url);
         return response.data.hourly;
@@ -53,34 +53,52 @@ async function initSheet() {
 }
 
 async function collectPast24Hours(sheet) {
-    console.log("Fetching past 24 hours data...");
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const dateStr = yesterday.toISOString().split('T')[0];
+    console.log("Fetching exact past 24 hours data...");
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    
+    const startDate = yesterday.toISOString().split('T')[0];
+    const endDate = now.toISOString().split('T')[0];
 
-    const weatherData = await getWeatherData(dateStr);
+    const weatherData = await getWeatherData(startDate, endDate);
     
     if(weatherData) {
         const rows = [];
         for(let i=0; i<weatherData.time.length; i++) {
-            const mockRiverLevel = await getRiverLevel(); 
-            rows.push({
-                Timestamp: weatherData.time[i],
-                Temperature_C: weatherData.temperature_2m[i],
-                Rainfall_mm: weatherData.precipitation[i],
-                River_Level_m: mockRiverLevel,
-                Type: 'Historical'
-            });
+            const dataTime = new Date(weatherData.time[i]);
+            
+            // Check if the hourly data is within the past 24 hours window
+            if (dataTime >= yesterday && dataTime <= now) {
+                const temp = weatherData.temperature_2m[i];
+                const rain = weatherData.precipitation[i];
+                
+                for(let j=0; j<12; j++) {
+                    const localTime = new Date(weatherData.time[i]);
+                    localTime.setMinutes(localTime.getMinutes() + (j * 5));
+                    
+                    // Ensure the 5-min chunk is also within the past 24 hours
+                    if (localTime >= yesterday && localTime <= now) {
+                        const mockRiverLevel = await getRiverLevel(); 
+                        rows.push({
+                            Timestamp: localTime.toISOString(),
+                            Temperature_C: temp,
+                            Rainfall_mm: rain,
+                            River_Level_m: mockRiverLevel,
+                            Type: 'Historical'
+                        });
+                    }
+                }
+            }
         }
         await sheet.addRows(rows);
-        console.log("Past 24 hours data saved to Google Sheets.");
+        console.log("Exact past 24 hours data saved to Google Sheets (5-minute intervals).");
     }
 }
 
 async function collectCurrentData(sheet) {
     console.log(`[${new Date().toISOString()}] Collecting current data...`);
     const today = new Date().toISOString().split('T')[0];
-    const weatherData = await getWeatherData(today);
+    const weatherData = await getWeatherData(today, today);
     
     if(weatherData) {
         const currentHour = new Date().getHours();
