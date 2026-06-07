@@ -47,8 +47,8 @@ async function getRivernetData(startSec, endSec) {
     const url = `https://api.rivernet.lk/cache-api.php?path=${encodeURIComponent(rawPath)}`;
     try {
         const res = await axios.get(url);
-        if (res.data && res.data.results && res.data.results.chartData && res.data.results.chartData.length > 0) {
-             return res.data.results.chartData[0].data; // array of {y, x, t}
+        if (res.data && Array.isArray(res.data.results) && res.data.results.length > 0) {
+             return res.data.results[0].data || []; // array of {y, x, t}
         }
         return [];
     } catch (err) {
