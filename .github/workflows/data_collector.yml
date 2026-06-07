@@ -1,0 +1,52 @@
+name: Kalu Ganga Data Collector
+
+on:
+  schedule:
+    # Runs every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allows you to run this manually from the Actions tab in GitHub
+    inputs:
+      init_data:
+        description: 'Fetch past 24 hours data (--init)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  collect-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          cd AI
+          npm install google-spreadsheet google-auth-library axios
+
+      - name: Run Collector (Init Past 24h)
+        if: ${{ github.event.inputs.init_data == 'true' }}
+        env:
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          cd AI
+          node dataset_collector.js --init
+
+      - name: Run Collector (Current Data)
+        if: ${{ github.event.inputs.init_data != 'true' }}
+        env:
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          cd AI
+          node dataset_collector.js

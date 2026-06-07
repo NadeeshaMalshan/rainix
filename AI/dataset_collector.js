@@ -3,16 +3,20 @@ const { JWT } = require('google-auth-library');
 const axios = require('axios');
 
 // ==== CONFIGURATION ====
-// Me details oya Google Cloud Platform eken Service Account ekak hadala ganna oni.
-const GOOGLE_SERVICE_ACCOUNT_EMAIL = 'your-service-account-email@project.iam.gserviceaccount.com';
-const GOOGLE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n';
-const SPREADSHEET_ID = 'your-google-spreadsheet-id-here';
+// Credentials env variables (GitHub Secrets walin enawa)
+const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : '';
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 // Ratnapura Coordinates
 const LAT = 6.6828;
 const LON = 80.3992;
 
-// Google Auth Initialize kireema
+if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY || !SPREADSHEET_ID) {
+    console.error("Missing credentials in environment variables!");
+    process.exit(1);
+}
+
 const serviceAccountAuth = new JWT({
   email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
   key: GOOGLE_PRIVATE_KEY,
@@ -21,7 +25,6 @@ const serviceAccountAuth = new JWT({
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
 
-// Open-Meteo API eken weather data ganna function eka
 async function getWeatherData(dateStr) {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation&start_date=${dateStr}&end_date=${dateStr}`;
     try {
@@ -33,15 +36,10 @@ async function getWeatherData(dateStr) {
     }
 }
 
-// River level eka ganna function eka
 async function getRiverLevel() {
-    // IMPORTANT: Sri Lanka Irrigation Dept ekata direct public JSON API ekak nathi nisa,
-    // oya real data gannawa nam eyalage website eken scrape karanna hari wena API ekak pawichi karanna hari wenawa.
-    // Danata meka random wathura mattamak (meters) return karanawa.
     return (Math.random() * (5.0 - 2.0) + 2.0).toFixed(2);
 }
 
-// Google Sheet eka setup kireema
 async function initSheet() {
     await doc.loadInfo(); 
     let sheet = doc.sheetsByTitle['Kalu_Ganga_Data'];
@@ -54,7 +52,6 @@ async function initSheet() {
     return sheet;
 }
 
-// Kalin peya 24 data save kireema
 async function collectPast24Hours(sheet) {
     console.log("Fetching past 24 hours data...");
     const yesterday = new Date();
@@ -80,7 +77,6 @@ async function collectPast24Hours(sheet) {
     }
 }
 
-// Idiri peya 24 thula current data save kireema
 async function collectCurrentData(sheet) {
     console.log(`[${new Date().toISOString()}] Collecting current data...`);
     const today = new Date().toISOString().split('T')[0];
@@ -88,7 +84,6 @@ async function collectCurrentData(sheet) {
     
     if(weatherData) {
         const currentHour = new Date().getHours();
-        
         const temp = weatherData.temperature_2m[currentHour];
         const rain = weatherData.precipitation[currentHour];
         const riverLvl = await getRiverLevel();
@@ -105,31 +100,17 @@ async function collectCurrentData(sheet) {
 }
 
 async function main() {
-    console.log("Starting Kalu Ganga Dataset Collector Script...");
+    console.log("Starting Kalu Ganga Dataset Collector...");
     const sheet = await initSheet();
 
-    // 1. Iye data tika google sheet ekata danawa
-    await collectPast24Hours(sheet);
-
-    // 2. Dan indan idiri peya 24 wenakal seth interval ekak dala winaadi 5n 5ta data update karanawa
-    const intervalTime = 5 * 60 * 1000; // Winaadi 5kata sarayak (5 mins)
-    
-    // First run eka danma karanawa
-    await collectCurrentData(sheet);
-
-    const intervalId = setInterval(async () => {
+    // '--init' command line argument eka dunnoth iye data gannawa, nathnam dan welawe data gannawa
+    if (process.argv.includes('--init')) {
+        await collectPast24Hours(sheet);
+    } else {
         await collectCurrentData(sheet);
-    }, intervalTime);
-
-    // 3. Peya 24kata passe script eka automatic stop wenawa
-    const runTime = 24 * 60 * 60 * 1000; // 24 Hours in milliseconds
-    setTimeout(() => {
-        clearInterval(intervalId);
-        console.log("24 Hours completed. Script is terminating.");
-        process.exit(0);
-    }, runTime);
-
-    console.log("Script will now run continuously for the next 24 hours. Don't close the terminal.");
+    }
+    
+    console.log("Task completed successfully.");
 }
 
 main();
