@@ -17,9 +17,16 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
     return `${hours}:00 ${ampm}`;
   };
 
-  const getWeatherIcon = (code) => {
-    if (code === 0) return 'wb_sunny';
-    if (code >= 1 && code <= 3) return 'partly_cloudy_day';
+  const getWeatherIcon = (code, timeStr) => {
+    let isNight = false;
+    if (timeStr) {
+      const date = new Date(timeStr);
+      const hours = date.getHours();
+      isNight = hours >= 19 || hours <= 6;
+    }
+    
+    if (code === 0) return isNight ? 'clear_night' : 'wb_sunny';
+    if (code >= 1 && code <= 3) return isNight ? 'partly_cloudy_night' : 'partly_cloudy_day';
     if (code === 45 || code === 48) return 'filter_drama';
     if (code >= 51 && code <= 57) return 'rainy';
     if (code >= 61 && code <= 67) return 'rainy_light';
@@ -77,7 +84,7 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
                 <div key={idx} className="w-[calc((100vw-48px)/4)] md:w-[100px] flex flex-col items-center h-full relative z-10 shrink-0">
                   <span className="text-[10px] md:text-xs text-white/70 mt-1 mb-1">{formatTime(h.time)}</span>
                   <span className="material-symbols-outlined text-2xl text-white my-1 drop-shadow-md">
-                    {getWeatherIcon(h.weatherCode)}
+                    {getWeatherIcon(h.weatherCode, h.time)}
                   </span>
                   
                   <span className="text-lg md:text-xl font-semibold text-white drop-shadow-md my-1 z-20">

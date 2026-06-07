@@ -63,9 +63,9 @@ export default function StationWeatherCard({ lat, lon, stationName }: StationWea
   }, [lat, lon]);
 
   // Map WMO weather codes to material symbols
-  const getWeatherIcon = (code: number) => {
-    if (code === 0) return 'clear_day';
-    if (code >= 1 && code <= 3) return 'partly_cloudy_day';
+  const getWeatherIcon = (code: number, isNight: boolean) => {
+    if (code === 0) return isNight ? 'clear_night' : 'clear_day';
+    if (code >= 1 && code <= 3) return isNight ? 'partly_cloudy_night' : 'partly_cloudy_day';
     if (code >= 45 && code <= 48) return 'foggy';
     if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rainy';
     if (code >= 71 && code <= 77) return 'weather_snowy';
@@ -94,7 +94,7 @@ export default function StationWeatherCard({ lat, lon, stationName }: StationWea
       <div className="flex flex-col justify-center items-center p-2">
         <div className="flex items-center gap-4 mb-2">
           <span className="material-symbols-outlined text-6xl text-white/90 drop-shadow-md">
-            {weather ? getWeatherIcon(weather.weatherCode) : 'cloud'}
+            {weather ? getWeatherIcon(weather.weatherCode, new Date().getHours() >= 19 || new Date().getHours() <= 6) : 'cloud'}
           </span>
           <div className="text-5xl font-light tracking-tighter">
             {weather ? Math.round(weather.temp) : '--'}°
