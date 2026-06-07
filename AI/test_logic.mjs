@@ -12,16 +12,15 @@ async function getWeatherData(startDate, endDate) {
     } catch (err) {
         console.error("Error fetching weather data:", err.message);
         return null;
+    }
 }
 
 async function getRivernetData(startSec, endSec) {
-    const rawPath = `api/reports/river-level/chart/minute/${startSec}/${endSec}?keys=${RIVERNET_DEVICE_KEY}&isPublic=1`;
+    const rawPath = `api/reports/river-level/chart/minute/${startSec}/${endSec}?keys=${RIVERNET_DEVICE_KEY}&last24HoursData=1&isPublic=1`;
     const url = `https://api.rivernet.lk/cache-api.php?path=${encodeURIComponent(rawPath)}`;
     try {
         const res = await axios.get(url);
-        console.log("res.data.results.series length:", res.data?.results?.series?.length);
         if (res.data && res.data.results && Array.isArray(res.data.results.series) && res.data.results.series.length > 0) {
-             console.log("72 hour data array length:", res.data.results.series[0].data.length);
              return res.data.results.series[0].data || [];
         }
         return [];
