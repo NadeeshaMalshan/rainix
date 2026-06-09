@@ -52,6 +52,9 @@ export default function App({ Component, pageProps }) {
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Hanken+Grotesk:wght@400;600&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
         
+        {/* Tailwind CSS Play CDN */}
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+        
         {/* Global Tailwind Theme Extensions */}
         <script id="tailwind-config" dangerouslySetInnerHTML={{
           __html: `
@@ -154,9 +157,6 @@ export default function App({ Component, pageProps }) {
             }
           `
         }} />
-        
-        {/* Tailwind CSS Play CDN - MUST be loaded after tailwind.config */}
-        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
       </Head>
     <div className="flex flex-col min-h-screen">
       <style>{`
