@@ -243,11 +243,11 @@ function AIRiverTelemetryCard({ data }) {
       
       try {
         const payload = {
-          river_name: river.name,
+          river_name: (river.name || "").toLowerCase().includes("ratnapura") ? "Kalu Ganga - Ratnapura" : river.name,
           historical_data: river.historicalData || [],
           weather_data: data
         };
-        const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://localhost:7860").replace(/\/$/, "");
+        const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://localhost:8000").replace(/\/$/, "");
         const res = await fetch(`${aiApiUrl}/api/predict/river`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
