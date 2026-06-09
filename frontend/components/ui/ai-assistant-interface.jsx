@@ -1053,7 +1053,7 @@ export function AIAssistantInterface() {
   };
 
   return (
-    <div className="h-full w-full overflow-hidden flex flex-col bg-transparent transition-colors duration-300 relative z-10">
+    <div className="h-full w-full overflow-hidden flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
       <style dangerouslySetInnerHTML={{ __html: `
         .responsive-ai-input-landing {
           width: 100% !important;

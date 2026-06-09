@@ -48,9 +48,6 @@ export default function App({ Component, pageProps }) {
         <meta charSet="utf-8" />
         <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport" />
         
-        {/* Tailwind CSS Play CDN */}
-        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-        
         {/* Google Fonts */}
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Hanken+Grotesk:wght@400;600&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -145,12 +142,21 @@ export default function App({ Component, pageProps }) {
                             "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
                             "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
                             "display-lg": ["64px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                        },
+                        "boxShadow": {
+                            "glass": "0 8px 32px 0 rgba(0, 0, 0, 0.15)",
+                            "glass-sm": "0 4px 16px 0 rgba(0, 0, 0, 0.1)",
+                            "glass-lg": "0 12px 48px 0 rgba(0, 0, 0, 0.2)",
+                            "neon": "0 0 20px rgba(255, 255, 255, 0.2)"
                         }
                     }
                 }
             }
           `
         }} />
+        
+        {/* Tailwind CSS Play CDN - MUST be loaded after tailwind.config */}
+        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
       </Head>
     <div className="flex flex-col min-h-screen">
       <style>{`

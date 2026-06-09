@@ -271,32 +271,6 @@ export default function Landing() {
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
       </Head>
 
-      <Script src="https://cdn.tailwindcss.com?plugins=forms,container-queries" strategy="beforeInteractive" />
-      <Script id="tailwind-config" strategy="beforeInteractive">
-        {`
-          tailwind.config = {
-            theme: {
-              extend: {
-                screens: {
-                  'xs': '375px',
-                },
-                fontFamily: {
-                  poppins: ['"Poppins"', 'sans-serif'],
-                  sans: ['"Poppins"', 'sans-serif'],
-                  display: ['"Poppins"', 'sans-serif'],
-                },
-                boxShadow: {
-                  'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.15)',
-                  'glass-sm': '0 4px 16px 0 rgba(0, 0, 0, 0.1)',
-                  'glass-lg': '0 12px 48px 0 rgba(0, 0, 0, 0.2)',
-                  'neon': '0 0 20px rgba(255, 255, 255, 0.2)',
-                }
-              }
-            }
-          }
-        `}
-      </Script>
-
       <style>{`
         @keyframes star-twinkle {
           0%, 100% { opacity: 0.2; transform: scale(0.8); }
