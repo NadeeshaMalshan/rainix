@@ -21,8 +21,8 @@ const RiverGaugeChart = ({ activeRiver }) => {
           historical_data: chartArr.map(d => ({ y: d.y !== undefined ? d.y : d.value })),
           weather_data: {}
         };
-        // Using localhost for now since the new backend is running locally
-        const res = await fetch('http://localhost:8000/api/predict/river', {
+        const aiApiUrl = (process.env.NEXT_PUBLIC_AI_API_URL || "http://localhost:8000").replace(/\/$/, "");
+        const res = await fetch(`${aiApiUrl}/api/predict/river`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
