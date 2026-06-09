@@ -277,7 +277,7 @@ export default function WeatherDashboard() {
 
   const weather = cityData?.weather?.weather;
   const rivers = cityData?.rivers || [];
-  const formattedCity = city || cityData?.weather?.city || 'Ratnapura';
+  const formattedCity = (lat && lon && !city) ? 'Your Location' : (city || cityData?.weather?.city || 'Select a City');
   const formattedCountry = cityData?.weather?.country || 'Sri Lanka';
   const currentTemp = weather ? Math.round(weather.temperature) : 31;
 

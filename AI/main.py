@@ -16,6 +16,8 @@ import asyncio
 import json
 import re
 import os
+import joblib
+import pandas as pd
 
 
 load_dotenv()
@@ -434,35 +436,64 @@ async def predict_river_level(req: RiverPredictionRequest):
         valid_history = [p.get("y") for p in recent_history if p.get("y") is not None]
         history_str = ", ".join(map(str, valid_history))
         
-        # Calculate simple linear trend (slope) over the recent history
-        trend_slope = 0.0
-        if len(valid_history) > 1:
-            trend_slope = (valid_history[-1] - valid_history[0]) / len(valid_history)
-        
-        # Extrapolate for 3 hours (assuming 1 pt/min, 180 points)
-        math_predicted_level = current_level + (trend_slope * 180)
-        math_predicted_level = round(math_predicted_level, 2)
-        
         weather_str = "No specific weather data available."
-        
-        # 1. Try to find an associated city for the river
         target_city = req.river_name
         for city, rivers in CITY_RIVERES.items():
             if any(r.lower() in req.river_name.lower() or req.river_name.lower() in r.lower() for r in rivers):
                 target_city = city
                 break
                 
-        # 2. Fetch actual weather data
         actual_weather = get_city_weather(target_city)
+        current_temp = 25.0
+        current_rain = 0.0
         if actual_weather and isinstance(actual_weather, dict) and "weather" in actual_weather:
+            current_temp = actual_weather.get("weather", {}).get("temperature", 25.0)
+            current_rain = actual_weather.get("weather", {}).get("precipitation", 0.0)
             hourly = actual_weather.get("weather", {}).get("hourly", [])
             if hourly and len(hourly) > 3:
                 next_3h = hourly[1:4]
-                weather_str = f"Next 3 hours rainfall: {[h.get('precip_mm', 0) for h in next_3h]} mm."
+                weather_str = f"Next 3 hours rainfall: {[h.get('precipitation', 0) for h in next_3h]} mm."
             else:
                 daily = actual_weather.get("weather", {}).get("daily", [])
                 if daily and len(daily) > 0:
                     weather_str = f"Today's rain chance: {daily[0].get('daily_chance_of_rain', 0)}%"
+
+        # Machine Learning Model Integration (Ridge Regression)
+        ml_predicted_level = current_level
+        is_kalu_ganga = "kalu ganga" in req.river_name.lower() and ("ratnapura" in req.river_name.lower() or "-" not in req.river_name)
+        
+        if is_kalu_ganga:
+            try:
+                model_path = os.path.join(os.path.dirname(__file__), 'river-model', 'river_level_ridge_model.joblib')
+                ridge_model = joblib.load(model_path)
+                
+                # Extract features (using valid_history which has 1 pt/min)
+                # If we don't have enough history, fallback to current level
+                rl_lag_1 = valid_history[-6] if len(valid_history) >= 6 else current_level
+                rl_lag_3 = valid_history[-16] if len(valid_history) >= 16 else rl_lag_1
+                rl_lag_6 = valid_history[-31] if len(valid_history) >= 31 else rl_lag_3
+                
+                # Pass actual real-time weather data to the ML model
+                df_features = pd.DataFrame([{
+                    'Temperature_C': current_temp,
+                    'Rainfall_mm': current_rain,
+                    'River_Level_m': current_level,
+                    'River_Level_lag_1': rl_lag_1,
+                    'River_Level_lag_3': rl_lag_3,
+                    'River_Level_lag_6': rl_lag_6,
+                    'Rainfall_lag_1': current_rain,
+                    'Rainfall_lag_3': current_rain,
+                    'Temp_lag_1': current_temp
+                }])
+                
+                predicted_difference_30m = ridge_model.predict(df_features)[0]
+                ml_predicted_level = current_level + predicted_difference_30m # 30 min prediction
+                ml_predicted_level = round(ml_predicted_level, 2)
+            except Exception as e:
+                print("ML Model Failed:", e)
+                ml_predicted_level = current_level
+        
+        # Weather data already fetched above
 
         # 3. Get other stations in the same river basin (Upstream/Downstream gauges)
         basin_name = req.river_name.split("-")[0].strip()
@@ -488,18 +519,19 @@ async def predict_river_level(req: RiverPredictionRequest):
             print("Failed to fetch basin data:", e)
 
         prompt = f"""
-You are an expert hydrological AI. Your task is to predict the water level of {req.river_name} EXACTLY 3 hours from now.
+You are an expert hydrological AI. Your task is to predict the water level of {req.river_name} EXACTLY 30 minutes from now.
 Use the following real-time data:
 1. Current Level: {current_level}m
 2. Recent History (last {len(valid_history)} points): [{history_str}]
-3. Calculated Math Trend (Base Prediction): {math_predicted_level}m (assuming current rate continues)
+3. {f'ML Predicted Trend (Ridge Regression): {ml_predicted_level}m (Base scientific prediction for 30 mins ahead)' if is_kalu_ganga else 'ML Predicted Trend: N/A (Use your hydrological reasoning based on rainfall, temperature, and river context factors to predict the level).'}
 4. Weather Context: {weather_str}
 5. Basin Context: {basin_data_str}
 
-Analyze the Calculated Math Trend, expected rainfall, and the levels of connected upstream/downstream stations. If upstream stations show High Alert or rising levels, or if heavy rain is expected, adjust the level higher. If no rain and upstream is safe, keep it close to the math trend.
+Analyze the ML Predicted Trend, expected rainfall, and the levels of connected upstream/downstream stations. If upstream stations show High Alert or rising levels, or if heavy rain is expected, adjust the ML predicted level higher. If no rain and upstream is safe, keep it close to the ML trend.
+Calculate a realistic range based on your analysis (e.g. ±0.05m from your calculated median).
 IMPORTANT: You MUST return ONLY a raw JSON object with NO markdown formatting, NO backticks, and NO explanations.
-Format:
-{{"predicted_level": 5.45}}
+Format exactly like this:
+{{"predicted_level": 5.45, "predicted_level_range": [5.40, 5.50]}}
 """
         
         # We will use the first available agent/LLM (e.g., Key A Google)
@@ -530,9 +562,28 @@ Format:
                     print(f"Gemma 4 failed on Key {key}: {e2}")
 
         if response is None:
-            return {"predicted_level": current_level, "error": "All AI models and keys failed"}
+            print("Fallback: LLM failed, returning raw ML model prediction.")
+            return {
+                "predicted_level": ml_predicted_level,
+                "predicted_level_range": [round(ml_predicted_level - 0.05, 2), round(ml_predicted_level + 0.05, 2)],
+                "error": "LLM generation failed (API keys expired/suspended). Using raw mathematical ML prediction."
+            }
             
-        content = response.content.strip()
+        content_raw = response.content
+        if isinstance(content_raw, list):
+            parts = []
+            for c in content_raw:
+                if isinstance(c, dict):
+                    if "text" in c:
+                        parts.append(str(c["text"]))
+                    # ignore thinking blocks to prevent invalid JSON
+                else:
+                    parts.append(str(c))
+            content = "".join(parts)
+        else:
+            content = str(content_raw)
+            
+        content = content.strip()
         
         # Clean up any markdown code blocks the LLM might have ignored instructions and added
         if content.startswith("```json"):
@@ -540,6 +591,11 @@ Format:
         if content.endswith("```"):
             content = content[:-3]
         content = content.strip()
+        
+        # Extract JSON using Regex in case there is garbage text around it
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        if match:
+            content = match.group(0)
         
         try:
             return json.loads(content)

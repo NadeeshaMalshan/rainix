@@ -9,3 +9,9 @@ langgraph
 google-generativeai
 langsmith
 cachetools
+pandas
+scikit-learn
+joblib
+requests
+apscheduler
+pydantic

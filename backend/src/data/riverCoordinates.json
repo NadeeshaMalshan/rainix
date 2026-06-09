@@ -6,32 +6,33 @@
   },
   "ID3": {
     "name": "Kuru Ganga (Kuruvita)",
-    "lat": null,
-    "lon": null
+    "lat": 6.6828,
+    "lon": 80.365727
   },
   "ID4": {
     "name": "Galathura Oya (Ayagama)",
-    "lat": null,
-    "lon": null
+    "lat": 6.638165,
+    "lon": 80.312146
   },
   "ID5": {
+    
     "name": "Denawaka Ganga (Pelmadulla)",
-    "lat": null,
-    "lon": null
+    "lat": 6.6828,
+    "lon": 80.539554
   },
   "ID6": {
     "name": "Kukule Ganga (Kalawana)",
-    "lat": null,
-    "lon": null
+    "lat": 6.580139,
+    "lon": 80.326011
   },
   "ID7": {
     "name": "Wey Ganga (Kahawaththa)",
-    "lat": null,
-    "lon": null
+    "lat": 6.581619,
+    "lon": 80.573507
   },
   "ID8": {
     "name": "Niriella Ganga (Elapatha)",
-    "lat": null,
-    "lon": null
+    "lat": 6.645713,
+    "lon": 80.357392
   }
 }

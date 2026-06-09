@@ -393,7 +393,7 @@ function AIRiverTelemetryCard({ data }) {
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-neutral-200/50 dark:border-zinc-800/70 pt-3 text-xs md:text-sm font-medium">
               <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
                 <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">online_prediction</span>
-                <span className="text-gray-900 dark:text-neutral-100 font-semibold">3H Predict: {predictedLevel !== undefined ? `${predictedLevel.toFixed(2)}m` : '...'}</span>
+                <span className="text-gray-900 dark:text-neutral-100 font-semibold">30min Predict: {predictedLevel !== undefined ? `${predictedLevel.toFixed(2)}m` : '...'}</span>
               </div>
               <div className="flex items-center gap-1.5 text-gray-600 dark:text-neutral-400">
                 <span className="material-symbols-outlined text-base text-gray-400 dark:text-neutral-500">trending_up</span>

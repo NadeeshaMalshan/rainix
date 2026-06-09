@@ -56,8 +56,12 @@ export default function RiverDashboard() {
   useEffect(() => {
     if (!router.isReady) return;
     const qLoc = getQueryLocation();
-    const targetCity = qLoc ? qLoc.trim() : (lat && lon) ? 'My Location' : 'Ratnapura';
-    fetchData(targetCity, lat, lon);
+    const targetCity = qLoc ? qLoc.trim() : (lat && lon) ? 'My Location' : null;
+    if (targetCity) {
+      fetchData(targetCity, lat, lon);
+    } else {
+      setIsLoading(false);
+    }
   }, [router.query, lat, lon, router.isReady]);
 
   const fetchData = async (cityQuery, targetLat, targetLon) => {
@@ -234,8 +238,8 @@ export default function RiverDashboard() {
   const rivers = cityData?.rivers || [];
   const activeRiver = rivers.length > 0 ? (rivers[selectedRiverIdx] || rivers[0]) : null;
 
-  const formattedCity = (queryLocation ? queryLocation.replace(/-/g, ' ') : null) || (activeRiver ? activeRiver.name : cityData?.weather?.city) || 'Ratnapura';
-  const formattedCountry = activeRiver ? (activeRiver.basin ? `${activeRiver.basin} Basin` : (cityData?.weather?.city || queryLocation || 'Ratnapura')) : (cityData?.weather?.country || 'Sri Lanka');
+  const formattedCity = (lat && lon && !queryLocation) ? 'Your Location' : ((queryLocation ? queryLocation.replace(/-/g, ' ') : null) || (activeRiver ? activeRiver.name : cityData?.weather?.city) || 'Select a City');
+  const formattedCountry = activeRiver ? (activeRiver.basin ? `${activeRiver.basin} Basin` : (cityData?.weather?.city || queryLocation || 'Select a City')) : (cityData?.weather?.country || 'Sri Lanka');
 
   const alertVal = activeRiver?.alertLevels?.find(x => x.name === 'alert')?.value || activeRiver?.levels?.alert || '--';
   const minorVal = activeRiver?.alertLevels?.find(x => x.name === 'minor')?.value || activeRiver?.levels?.minor || '--';

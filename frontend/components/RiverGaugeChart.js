@@ -1,7 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const RiverGaugeChart = ({ activeRiver }) => {
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [prediction, setPrediction] = useState(null);
+  const [isPredicting, setIsPredicting] = useState(false);
+
+  const riverNameStr = `${activeRiver?.basin || ''} ${activeRiver?.name || ''} ${activeRiver?.originalName || ''} ${activeRiver?.city || ''}`.toLowerCase();
+  const isKaluGanga = riverNameStr.includes("kalu") && riverNameStr.includes("ratnapura");
+
+  useEffect(() => {
+    if (!activeRiver || !isKaluGanga) return;
+    const chartArr = activeRiver.chart || activeRiver.historicalData;
+    if (!chartArr || chartArr.length === 0) return;
+
+    const fetchPrediction = async () => {
+      setIsPredicting(true);
+      try {
+        const payload = {
+          river_name: `Kalu Ganga - Ratnapura`,
+          historical_data: chartArr.map(d => ({ y: d.y !== undefined ? d.y : d.value })),
+          weather_data: {}
+        };
+        // Using localhost for now since the new backend is running locally
+        const res = await fetch('http://localhost:8000/api/predict/river', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data && data.predicted_level !== undefined && data.predicted_level !== null) {
+          setPrediction(data.predicted_level);
+        }
+      } catch (err) {
+        console.error("Failed to fetch AI prediction", err);
+      } finally {
+        setIsPredicting(false);
+      }
+    };
+    
+    fetchPrediction();
+  }, [activeRiver]);
 
   if (!activeRiver) return null;
 
@@ -32,8 +70,8 @@ const RiverGaugeChart = ({ activeRiver }) => {
     chartData = chartArr.filter(d => (d.y !== null && d.y !== undefined) || (d.value !== null && d.value !== undefined));
     if (chartData.length > 0) {
       const values = chartData.map(d => d.y !== undefined ? d.y : d.value);
-      minRiverLevel = Math.min(...values).toFixed(1);
-      maxRiverLevel = Math.max(...values).toFixed(1);
+      minRiverLevel = Math.min(...values);
+      maxRiverLevel = Math.max(...values);
     }
   }
 
@@ -68,8 +106,16 @@ const RiverGaugeChart = ({ activeRiver }) => {
   if (chartData.length > 0) {
     const values = chartData.map(d => d.y !== undefined ? d.y : d.value);
     const times = chartData.map(d => {
-      if (d.x !== undefined) return typeof d.x === 'string' ? new Date(d.x).getTime() : d.x;
-      return new Date(d.time).getTime();
+      let tVal = d.t !== undefined ? d.t : (d.x !== undefined ? d.x : d.time);
+      if (typeof tVal === 'string') {
+        tVal = tVal.substring(0, 19);
+        return new Date(tVal).getTime();
+      } else if (typeof tVal === 'number') {
+        // If it's a numeric epoch, the API incorrectly treated local time as UTC. 
+        // We subtract 5.5 hours (19800000 ms) to correct the epoch.
+        return tVal - 19800000;
+      }
+      return tVal;
     });
     
     const minV = Math.min(...values);
@@ -91,7 +137,14 @@ const RiverGaugeChart = ({ activeRiver }) => {
     
     activePoints = chartData.map((d, i) => {
       const v = d.y !== undefined ? d.y : d.value;
-      const t = d.x !== undefined ? (typeof d.x === 'string' ? new Date(d.x).getTime() : d.x) : new Date(d.time).getTime();
+      let tVal = d.t !== undefined ? d.t : (d.x !== undefined ? d.x : d.time);
+      let t = tVal;
+      if (typeof tVal === 'string') {
+        tVal = tVal.substring(0, 19);
+        t = new Date(tVal).getTime();
+      } else if (typeof tVal === 'number') {
+        t = tVal - 19800000;
+      }
       const xPos = times.length > 1 ? ((t - minT) / (maxT - minT)) * chartWidth : chartWidth / 2;
       const yPos = chartHeight - (((v - yMinChart) / (yMaxChart - yMinChart)) * chartHeight);
       return { x: xPos, y: yPos, value: v, time: t };
@@ -153,9 +206,22 @@ const RiverGaugeChart = ({ activeRiver }) => {
               </div>
             </div>
             <div className="flex gap-4 mt-1 opacity-70 text-xs md:text-sm font-normal">
-              <span>Min: {minRiverLevel}m</span>
-              <span>Max: {maxRiverLevel}m</span>
+              <span>Min: {parseFloat(minRiverLevel).toFixed(2)}m</span>
+              <span>Max: {parseFloat(maxRiverLevel).toFixed(2)}m</span>
             </div>
+            {isKaluGanga && (prediction !== null || isPredicting) && (
+              <div className="flex items-center gap-1 mt-1 text-xs md:text-sm font-medium text-[#eff5ff] w-fit transition-all">
+                {isPredicting ? (
+                  <div className="h-4 w-36 bg-white/20 animate-pulse rounded-md"></div>
+                ) : (
+                  <>
+                    <span className="opacity-80">After 30min: ~{prediction.toFixed(2)}m</span>
+                    {prediction > parseFloat(currentRiverLevel) + 0.01 && <span className="material-symbols-outlined text-[16px]">arrow_upward</span>}
+                    {prediction < parseFloat(currentRiverLevel) - 0.01 && <span className="material-symbols-outlined text-[16px]">arrow_downward</span>}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -282,6 +348,22 @@ const RiverGaugeChart = ({ activeRiver }) => {
                 )}
               </div>
             </div>
+
+            {activePoints.length > 1 && (
+              <div className="absolute left-0 right-0 -bottom-6 flex justify-between text-[9px] md:text-[10px] font-medium text-[#eff5ff] opacity-60 pointer-events-none px-1">
+                {[0, 0.25, 0.5, 0.75, 1].map((fraction, i) => {
+                  const minT = activePoints[0].time;
+                  const maxT = activePoints[activePoints.length - 1].time;
+                  const t = minT + (maxT - minT) * fraction;
+                  return (
+                    <span key={i}>
+                      {new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
           </div>
         </div>
 
