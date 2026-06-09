@@ -539,6 +539,16 @@ export function AIAssistantInterface() {
   const chatEndRef = useRef(null);
   const sessionIdRef = useRef(null);
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      document.body.classList.add("is-chatting");
+    } else {
+      document.body.classList.remove("is-chatting");
+    }
+    
+    return () => document.body.classList.remove("is-chatting");
+  }, [messages.length]);
+
   if (!sessionIdRef.current) {
     sessionIdRef.current = Math.random().toString(36).substring(7);
   }
@@ -1053,7 +1063,7 @@ export function AIAssistantInterface() {
   };
 
   return (
-    <div className="h-full w-full overflow-hidden flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
+    <div className="h-full w-full overflow-hidden flex flex-col bg-transparent text-gray-900 dark:text-neutral-100 transition-colors duration-300">
       <style dangerouslySetInnerHTML={{ __html: `
         .responsive-ai-input-landing {
           width: 100% !important;

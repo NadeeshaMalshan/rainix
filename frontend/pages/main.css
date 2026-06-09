@@ -17,3 +17,9 @@ body {
 .floating-particle {
     animation: float var(--duration, 25s) infinite ease-in-out;
 }
+
+body.is-chatting .idle-rain-container {
+    opacity: 0 !important;
+    visibility: hidden;
+    pointer-events: none;
+}

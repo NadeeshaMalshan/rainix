@@ -9,7 +9,6 @@ import 'leaflet/dist/leaflet.css';
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const showFooter = ['/', '/landing'].includes(router.pathname);
-  const isChatUI = router.pathname.includes('/ai');
 
   const [isIdle, setIsIdle] = useState(false);
   const [showRain, setShowRain] = useState(false);
@@ -167,8 +166,8 @@ export default function App({ Component, pageProps }) {
           100% { transform: translateY(110vh) translateX(-20vh) rotate(15deg); opacity: 0; }
         }
       `}</style>
-      {showRain && !isChatUI && (
-        <div className={`fixed inset-0 pointer-events-none z-[0] overflow-hidden transition-opacity duration-[2000ms] bg-transparent ${isIdle ? 'opacity-100' : 'opacity-0'}`}>
+      {showRain && (
+        <div className={`idle-rain-container fixed inset-0 pointer-events-none z-[0] overflow-hidden transition-opacity duration-[2000ms] bg-transparent ${isIdle ? 'opacity-100' : 'opacity-0'}`}>
           {Array.from({ length: 30 }).map((_, i) => (
             <div 
               key={i} 
