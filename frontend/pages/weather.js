@@ -498,8 +498,8 @@ export default function WeatherDashboard() {
       
       {['clear_night', 'partly_cloudy_night'].includes(weatherState) && (
         <div className="star-container absolute inset-0 pointer-events-none z-0">
-          {Array.from({ length: 45 }).map((_, i) => (
-            <div key={i} className="star-particle animate-star absolute bg-white rounded-full" style={{ width: `${Math.random() * 2 + 1}px`, height: `${Math.random() * 2 + 1}px`, left: `${Math.random() * 100}%`, top: `${Math.random() * 65}%`, animationDuration: `${0.8 + Math.random() * 1.8}s`, animationDelay: `${Math.random() * -2}s` }} />
+          {Array.from({ length: 25 }).map((_, i) => (
+            <div key={i} className="star-particle animate-star absolute bg-white rounded-full" style={{ willChange: 'opacity', width: `${Math.random() * 2 + 1}px`, height: `${Math.random() * 2 + 1}px`, left: `${Math.random() * 100}%`, top: `${Math.random() * 65}%`, animationDuration: `${0.8 + Math.random() * 1.8}s`, animationDelay: `${Math.random() * -2}s` }} />
           ))}
         </div>
       )}
@@ -535,16 +535,16 @@ export default function WeatherDashboard() {
 
       {['rainy', 'thunderstorm'].includes(weatherState) && (
         <div className="rain-container absolute inset-0 pointer-events-none z-20">
-          {Array.from({ length: 180 }).map((_, i) => (
-            <div key={i} className="rain-drop animate-rain absolute bg-sky-200/60 w-[2px] h-8 rounded" style={{ left: `${Math.random() * 100}%`, top: `-40px`, animationDuration: `${0.45 + Math.random() * 0.3}s`, animationDelay: `${Math.random() * -1.5}s`, opacity: Math.random() * 0.4 + 0.3 }} />
+          {Array.from({ length: 60 }).map((_, i) => (
+            <div key={i} className="rain-drop animate-rain absolute bg-sky-200/60 w-[2px] h-8 rounded" style={{ willChange: 'transform', left: `${Math.random() * 100}%`, top: `-40px`, animationDuration: `${0.45 + Math.random() * 0.3}s`, animationDelay: `${Math.random() * -1.5}s`, opacity: Math.random() * 0.4 + 0.3 }} />
           ))}
         </div>
       )}
 
       {weatherState === 'snow' && (
         <div className="snow-container absolute inset-0 pointer-events-none z-20">
-          {Array.from({ length: 45 }).map((_, i) => (
-            <div key={i} className="snowflake animate-snow absolute bg-white rounded-full" style={{ width: `${Math.random() * 6 + 4}px`, height: `${Math.random() * 6 + 4}px`, left: `${Math.random() * 100}%`, top: `-20px`, animationDuration: `${4.5 + Math.random() * 3.5}s`, animationDelay: `${Math.random() * -8}s` }} />
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div key={i} className="snowflake animate-snow absolute bg-white rounded-full" style={{ willChange: 'transform', width: `${Math.random() * 6 + 4}px`, height: `${Math.random() * 6 + 4}px`, left: `${Math.random() * 100}%`, top: `-20px`, animationDuration: `${4.5 + Math.random() * 3.5}s`, animationDelay: `${Math.random() * -8}s` }} />
           ))}
         </div>
       )}
@@ -795,17 +795,26 @@ export default function WeatherDashboard() {
         }
 
         .deep-frosted-pill {
-          background-color: rgba(255, 255, 255, 0.02) !important;
-          -webkit-backdrop-filter: blur(16px) !important;
-          backdrop-filter: blur(16px) !important;
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          backdrop-filter: blur(8px) !important;
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
           transform: translateZ(0);
         }
         .deep-frosted-dropdown {
           background-color: rgba(13, 20, 35, 0.85) !important;
-          -webkit-backdrop-filter: blur(28px) !important;
-          backdrop-filter: blur(28px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
+          backdrop-filter: blur(12px) !important;
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          transform: translateZ(0);
+        }
+        .deep-frosted-card {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          backdrop-filter: blur(8px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3) !important;
+          transform: translateZ(0);
         }
       `}} />
 
