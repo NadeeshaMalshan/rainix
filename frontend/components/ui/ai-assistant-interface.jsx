@@ -1584,11 +1584,12 @@ export function AIAssistantInterface() {
                             return (
                               <>
                                 {showWeather && (() => {
-                                  const askDays = query.match(/(?:forecast|dawas|dina|days|day)\s*(\d+)/i) || query.includes("14") || query.includes("dina 5");
-                                  const askHourly = query.includes("24") || query.includes("hourly") || query.includes("peya");
+                                  const combinedText = `${query} ${msg.thinking || ""} ${msg.text || ""}`.toLowerCase();
+                                  const askDays = combinedText.match(/(?:forecast|dawas|dina|days|day|දින|දවස්)\s*(\d+)/i) || combinedText.includes("14") || combinedText.includes("dina 5") || combinedText.includes("දින") || combinedText.includes("දවස්") || combinedText.match(/\b(11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)(th| වෙනි)?\b/);
+                                  const askHourly = combinedText.includes("24") || combinedText.includes("hourly") || combinedText.includes("peya") || combinedText.includes("පැය");
                                   
                                   if (askDays) {
-                                    const daysCount = query.match(/(\d+)/)?.[1] || 14;
+                                    const daysCount = combinedText.match(/(?:forecast|dawas|dina|days|day|දින|දවස්)\s*(\d+)/i)?.[1] || 14;
                                     return <AIForecastDaysCard data={msg.weatherData} days={Number(daysCount)} />;
                                   } else if (askHourly) {
                                     return <AIHourlyForecastCard data={msg.weatherData} />;

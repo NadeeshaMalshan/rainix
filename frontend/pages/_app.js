@@ -157,7 +157,7 @@ export default function App({ Component, pageProps }) {
           `
         }} />
       </Head>
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
       <style>{`
         @keyframes idleRainFall {
           0% { transform: translateY(-20px) rotate(15deg); opacity: 0; }
