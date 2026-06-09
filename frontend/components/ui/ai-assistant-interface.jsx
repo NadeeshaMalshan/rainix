@@ -591,6 +591,9 @@ export function AIAssistantInterface() {
       }
       
       setInputValue("");
+      if (inputRef.current) {
+        inputRef.current.style.height = '24px';
+      }
       setIsLoading(true);
 
       try {
@@ -949,21 +952,27 @@ export function AIAssistantInterface() {
       <motion.div
         layoutId="chatGPTInputBar"
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
-        className="ai-input-bar-pill w-full bg-neutral-100 dark:bg-[#2f2f2f] rounded-full flex items-center justify-between shadow-sm border border-transparent dark:border-zinc-800 transition-colors"
+        className="w-full bg-neutral-100 dark:bg-[#1a1a1a] rounded-2xl flex flex-col shadow-lg border border-neutral-200 dark:border-[#333] transition-colors p-3 sm:p-4"
+        style={{ minHeight: '120px' }}
       >
         {/* Input Element */}
-        <input
+        <textarea
           ref={inputRef}
-          type="text"
-          placeholder="Ask anything"
+          rows={1}
+          placeholder="Ask anything about weather or river levels..."
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            e.target.style.height = 'auto';
+            e.target.style.height = `${Math.min(Math.max(e.target.scrollHeight, 40), 250)}px`;
+          }}
           onKeyDown={handleKeyPress}
-          className="flex-1 min-w-0 text-gray-800 dark:text-neutral-100 text-base outline-none placeholder:text-gray-400 dark:placeholder:text-neutral-400 border-0 focus:ring-0 p-0 bg-transparent"
+          className="flex-1 w-full text-gray-800 dark:text-neutral-100 text-[15px] outline-none placeholder:text-gray-500 dark:placeholder:text-[#888] border-0 focus:ring-0 p-0 bg-transparent resize-none overflow-y-auto custom-scrollbar"
+          style={{ minHeight: '40px', maxHeight: '250px', lineHeight: '24px' }}
         />
 
-        {/* Right-side utility and submit button */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Bottom utility and submit button */}
+        <div className="flex items-center justify-between w-full mt-2">
           {/* Custom Model Selector */}
           <div className="relative flex items-center group mr-1">
             <button
@@ -1025,8 +1034,8 @@ export function AIAssistantInterface() {
             disabled={!isLoading && !inputValue.trim()}
             className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
               (isLoading || inputValue.trim())
-                ? "bg-white dark:bg-white text-black dark:text-black shadow-md hover:scale-105 active:scale-95 cursor-pointer"
-                : "bg-white dark:bg-white text-black dark:text-black opacity-90 cursor-default"
+                ? "bg-black text-white dark:bg-white dark:text-black shadow-md hover:scale-105 active:scale-95 cursor-pointer"
+                : "bg-gray-200 text-gray-400 dark:bg-[#333] dark:text-[#888] cursor-default"
             }`}
             title={isLoading ? "Stop" : "Send message"}
           >
@@ -1044,7 +1053,7 @@ export function AIAssistantInterface() {
   };
 
   return (
-    <div className="h-full w-full overflow-hidden flex flex-col bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-neutral-100 transition-colors duration-300">
+    <div className="h-full w-full overflow-hidden flex flex-col bg-transparent transition-colors duration-300 relative z-10">
       <style dangerouslySetInnerHTML={{ __html: `
         .responsive-ai-input-landing {
           width: 100% !important;
@@ -1391,7 +1400,7 @@ export function AIAssistantInterface() {
             {/* Welcome message */}
             <div className="text-center mb-8 w-full max-w-2xl px-4">
               <h1 className="text-3xl  mb-2">
-                Welcome to rainiX AI
+                rainiX AI
               </h1>
               <p className="text-gray-500 dark:text-neutral-400 max-w-md mx-auto mb-8">
                 Your intelligent weather companion. Ask about current conditions, rain forecasts, or climate trends.

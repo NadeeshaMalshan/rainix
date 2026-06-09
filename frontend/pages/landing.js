@@ -472,7 +472,8 @@ export default function Landing() {
                   className="deep-frosted-pill w-full h-11 md:h-[3.25rem] rounded-full shadow-lg transition-all duration-300 flex items-center pr-1.5 pl-3 md:pl-5 hover:bg-white/25 focus-within:bg-white/25 focus-within:border-white/40"
                 >
                   <input 
-                    className="flex-1 min-w-0 bg-transparent border-none text-left focus:ring-0 text-white font-medium text-sm md:text-lg placeholder:text-white placeholder:opacity-60 outline-none"
+                    className="flex-1 min-w-0 !bg-transparent border-none text-left focus:ring-0 text-white font-medium text-sm md:text-lg placeholder:text-white placeholder:opacity-60 outline-none"
+                    style={{ backgroundColor: 'transparent' }}
                     placeholder="Search City or River..." 
                     type="text"
                     value={searchQuery}

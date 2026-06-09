@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
 import Footer from '../components/Footer';
 import './main.css';
 import '../styles/globals.css';
@@ -8,6 +9,38 @@ import 'leaflet/dist/leaflet.css';
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const showFooter = ['/', '/landing'].includes(router.pathname);
+  const isChatUI = router.pathname.includes('/ai');
+
+  const [isIdle, setIsIdle] = useState(false);
+  const [showRain, setShowRain] = useState(false);
+
+  useEffect(() => {
+    let idleTimer;
+    const resetIdle = () => {
+      setIsIdle(false);
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => setIsIdle(true), 5000); // 5 secs
+    };
+
+    const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+    events.forEach(e => window.addEventListener(e, resetIdle, true));
+    resetIdle();
+
+    return () => {
+      clearTimeout(idleTimer);
+      events.forEach(e => window.removeEventListener(e, resetIdle, true));
+    };
+  }, []);
+
+  useEffect(() => {
+    let timeout;
+    if (isIdle) {
+      setShowRain(true);
+    } else {
+      timeout = setTimeout(() => setShowRain(false), 2000);
+    }
+    return () => clearTimeout(timeout);
+  }, [isIdle]);
 
   return (
     <>
@@ -120,6 +153,31 @@ export default function App({ Component, pageProps }) {
         }} />
       </Head>
     <div className="flex flex-col min-h-screen">
+      <style>{`
+        @keyframes idleRainFall {
+          0% { transform: translateY(-20px) rotate(15deg); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(110vh) translateX(-20vh) rotate(15deg); opacity: 0; }
+        }
+      `}</style>
+      {showRain && !isChatUI && (
+        <div className={`fixed inset-0 pointer-events-none z-[0] overflow-hidden transition-opacity duration-[2000ms] bg-transparent ${isIdle ? 'opacity-100' : 'opacity-0'}`}>
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div 
+              key={i} 
+              className="absolute w-[1px] h-6 rounded-full bg-black/30 dark:bg-white/30"
+              style={{
+                left: `${-10 + Math.random() * 120}%`,
+                top: `-40px`,
+                animation: `idleRainFall ${1.5 + Math.random() * 2}s linear infinite`,
+                animationDelay: `${Math.random() * 3}s`, /* Positive delay so it starts empty and falls down */
+                willChange: 'transform'
+              }}
+            />
+          ))}
+        </div>
+      )}
       <main className="flex-1">
         <Component {...pageProps} />
       </main>
