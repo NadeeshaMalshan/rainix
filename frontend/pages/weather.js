@@ -277,7 +277,12 @@ export default function WeatherDashboard() {
 
   const weather = cityData?.weather?.weather;
   const rivers = cityData?.rivers || [];
-  const formattedCity = (lat && lon && !city) ? 'Your Location' : (city || cityData?.weather?.city || 'Select a City');
+  
+  const urlLat = lat || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lat') : null);
+  const urlLon = lon || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lon') : null);
+  const urlCity = city || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('city') : null);
+  
+  const formattedCity = urlCity || cityData?.weather?.city || ((urlLat && urlLon) ? 'Your Location' : 'Select a City');
   const formattedCountry = cityData?.weather?.country || 'Sri Lanka';
   const currentTemp = weather ? Math.round(weather.temperature) : 31;
 
@@ -924,7 +929,7 @@ export default function WeatherDashboard() {
           </div>
         </div>
 
-        <LoadingScreen isVisible={isLoading} text={`Getting weather data of ${formattedCity}`} />
+        <LoadingScreen isVisible={isLoading} text={(urlLat && urlLon && !urlCity && !cityData) ? 'Getting weather data of your location' : `Getting weather data of ${formattedCity}`} />
 
         {!isLoading && errorMsg && (
           <div className="flex-1 flex flex-col justify-center items-center w-full min-h-full relative z-40 px-4">

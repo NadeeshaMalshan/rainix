@@ -238,7 +238,11 @@ export default function RiverDashboard() {
   const rivers = cityData?.rivers || [];
   const activeRiver = rivers.length > 0 ? (rivers[selectedRiverIdx] || rivers[0]) : null;
 
-  const formattedCity = (lat && lon && !queryLocation) ? 'Your Location' : ((queryLocation ? queryLocation.replace(/-/g, ' ') : null) || (activeRiver ? activeRiver.name : cityData?.weather?.city) || 'Select a City');
+  const urlLat = lat || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lat') : null);
+  const urlLon = lon || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lon') : null);
+  const urlQueryLocation = queryLocation || (typeof window !== 'undefined' && window.location.search ? new URLSearchParams(window.location.search).keys().next().value : null);
+
+  const formattedCity = (urlQueryLocation && urlQueryLocation !== 'lat' && urlQueryLocation !== 'lon' ? urlQueryLocation.replace(/-/g, ' ') : null) || (activeRiver ? activeRiver.name : cityData?.weather?.city) || ((urlLat && urlLon) ? 'Your Location' : 'Select a City');
   const formattedCountry = activeRiver ? (activeRiver.basin ? `${activeRiver.basin} Basin` : (cityData?.weather?.city || queryLocation || 'Select a City')) : (cityData?.weather?.country || 'Sri Lanka');
 
   const alertVal = activeRiver?.alertLevels?.find(x => x.name === 'alert')?.value || activeRiver?.levels?.alert || '--';
@@ -613,7 +617,7 @@ export default function RiverDashboard() {
           </div>
         </div>
 
-        <LoadingScreen isVisible={isLoading} text={`Getting river data of ${formattedCity}`} />
+        <LoadingScreen isVisible={isLoading} text={(urlLat && urlLon && !urlQueryLocation && !cityData) ? 'Getting river data of your location' : `Getting river data of ${formattedCity}`} />
 
         {!isLoading && !errorMsg && cityData && (
           <div className="flex-1 flex flex-col justify-center items-center w-full min-h-full relative z-40 main-weather-content pt-20 md:pt-24 pb-8">

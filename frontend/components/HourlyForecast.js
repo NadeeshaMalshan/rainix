@@ -7,6 +7,66 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
   // Get next 24 hours (or what's available up to 24)
   const next24 = hourlyData ? hourlyData.slice(0, 24) : [];
 
+  // Custom hook for drag-to-scroll
+  useEffect(() => {
+    const applyDrag = (slider) => {
+      if (!slider) return;
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+
+      const onMouseDown = (e) => {
+        isDown = true;
+        slider.style.cursor = 'grabbing';
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+      };
+      const onMouseLeave = () => {
+        isDown = false;
+        slider.style.cursor = 'grab';
+      };
+      const onMouseUp = () => {
+        isDown = false;
+        slider.style.cursor = 'grab';
+      };
+      const onMouseMove = (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        const walk = (x - startX) * 2;
+        slider.scrollLeft = scrollLeft - walk;
+      };
+
+      slider.addEventListener('mousedown', onMouseDown);
+      slider.addEventListener('mouseleave', onMouseLeave);
+      slider.addEventListener('mouseup', onMouseUp);
+      slider.addEventListener('mousemove', onMouseMove);
+      slider.style.cursor = 'grab';
+
+      return () => {
+        slider.removeEventListener('mousedown', onMouseDown);
+        slider.removeEventListener('mouseleave', onMouseLeave);
+        slider.removeEventListener('mouseup', onMouseUp);
+        slider.removeEventListener('mousemove', onMouseMove);
+      };
+    };
+
+    const cleanupLeft = applyDrag(scrollRefLeft.current);
+    const cleanupRight = applyDrag(scrollRefRight.current);
+
+    return () => {
+      if (cleanupLeft) cleanupLeft();
+      if (cleanupRight) cleanupRight();
+    };
+  }, []);
+
+  const scrollContainer = (ref, direction) => {
+    if (ref.current) {
+      const scrollAmount = direction === 'left' ? -250 : 250;
+      ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   // Helper to format time
   const formatTime = (timeStr) => {
     const date = new Date(timeStr);
@@ -52,7 +112,16 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         
         {/* Left Side: 24 hrs weather */}
-        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72 group">
+          
+          {/* Navigation Arrows */}
+          <button onClick={() => scrollContainer(scrollRefLeft, 'left')} className="absolute left-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+            <span className="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button onClick={() => scrollContainer(scrollRefLeft, 'right')} className="absolute right-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+            <span className="material-symbols-outlined">chevron_right</span>
+          </button>
+
           <h3 className="text-center font-medium text-sm md:text-base text-white/90 mb-4 tracking-wide">
             24-Hour Forecast
           </h3>
@@ -106,7 +175,16 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
         </div>
 
         {/* Right Side: 24 hrs raining mm */}
-        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72">
+        <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72 group">
+          
+          {/* Navigation Arrows */}
+          <button onClick={() => scrollContainer(scrollRefRight, 'left')} className="absolute left-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+            <span className="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button onClick={() => scrollContainer(scrollRefRight, 'right')} className="absolute right-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+            <span className="material-symbols-outlined">chevron_right</span>
+          </button>
+
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-white/80 font-medium flex items-center gap-2">
              
