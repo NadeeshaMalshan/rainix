@@ -115,10 +115,10 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
         <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72 group">
           
           {/* Navigation Arrows */}
-          <button onClick={() => scrollContainer(scrollRefLeft, 'left')} className="absolute left-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+          <button onClick={() => scrollContainer(scrollRefLeft, 'left')} className="absolute left-2 top-1/2 -translate-y-1/2 z-50 bg-black/40 hover:bg-black/60 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
             <span className="material-symbols-outlined">chevron_left</span>
           </button>
-          <button onClick={() => scrollContainer(scrollRefLeft, 'right')} className="absolute right-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+          <button onClick={() => scrollContainer(scrollRefLeft, 'right')} className="absolute right-2 top-1/2 -translate-y-1/2 z-50 bg-black/40 hover:bg-black/60 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
             <span className="material-symbols-outlined">chevron_right</span>
           </button>
 
@@ -178,10 +178,10 @@ const HourlyForecast = ({ hourlyData, sunrise, sunset, timeZone }) => {
         <div className="deep-frosted-pill animate-fade-in-up rounded-3xl p-4 md:p-6 shadow-glass relative overflow-hidden flex flex-col h-72 group">
           
           {/* Navigation Arrows */}
-          <button onClick={() => scrollContainer(scrollRefRight, 'left')} className="absolute left-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+          <button onClick={() => scrollContainer(scrollRefRight, 'left')} className="absolute left-2 top-1/2 -translate-y-1/2 z-50 bg-black/40 hover:bg-black/60 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
             <span className="material-symbols-outlined">chevron_left</span>
           </button>
-          <button onClick={() => scrollContainer(scrollRefRight, 'right')} className="absolute right-2 top-1/2 -translate-y-1/2 z-50 bg-white/10 hover:bg-white/30 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
+          <button onClick={() => scrollContainer(scrollRefRight, 'right')} className="absolute right-2 top-1/2 -translate-y-1/2 z-50 bg-black/40 hover:bg-black/60 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-md hidden md:flex items-center justify-center">
             <span className="material-symbols-outlined">chevron_right</span>
           </button>
 
