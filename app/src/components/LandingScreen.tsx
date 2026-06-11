@@ -8,7 +8,7 @@ import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import * as Haptics from 'expo-haptics';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, withSequence, withDelay, runOnJS, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing, withSequence, withDelay, runOnJS, withSpring, interpolate, Extrapolation, useAnimatedScrollHandler } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 
 const { width, height } = Dimensions.get('window');
@@ -131,6 +131,25 @@ export default function LandingScreen({  pages,
   const [pageWeathers, setPageWeathers] = useState<Record<string, any>>({});
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const smallTitleStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(scrollY.value, [40, 80], [0, 1], Extrapolation.CLAMP);
+    return { opacity };
+  });
+
+  const largeHeaderStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(scrollY.value, [0, 40], [1, 0], Extrapolation.CLAMP);
+    const translateY = interpolate(scrollY.value, [0, 80], [0, -20], Extrapolation.CLAMP);
+    const scale = interpolate(scrollY.value, [0, 80], [1, 0.9], Extrapolation.CLAMP);
+    return { opacity, transform: [{ translateY }, { scale }] };
+  });
 
   const safePages = pages || [{ type: 'landing', id: 'landing' }];  useEffect(() => {
     const loadWeathers = async () => {
@@ -294,101 +313,58 @@ export default function LandingScreen({  pages,
         <Cloud top={height * 0.08} width={144} height={72} duration={120000} delay={36000} isNight={true} />
       </View>
 
-      {/* Main Content (OneUI Dashboard style - Pure Black) */}
-      <View style={{ flex: 1, alignItems: 'center', paddingTop: 80, paddingHorizontal: 16 }}>
+      {/* Fixed Top Bar (OneUI Style) */}
+      <View className="absolute top-0 left-0 right-0 z-50 flex-row justify-between items-end px-4 pb-3" style={{ height: 90, backgroundColor: 'rgba(0,0,0,0.85)' }}>
+        <Animated.Text 
+          style={[
+            {
+              fontSize: 22,
+              fontWeight: '600',
+              color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF',
+              marginLeft: 8,
+            },
+            smallTitleStyle
+          ]}
+        >
+          {isEditMode ? `${selectedItems.length} selected` : 'rainiX'}
+        </Animated.Text>
         
-        {/* Title & AI Button / Edit Mode Header */}
-        {isEditMode ? (
-          <>
-            <Text 
-              style={{
-                fontSize: 42,
-                fontWeight: '600',
-                color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF',
-                textAlign: 'center',
-                marginBottom: 32,
-                marginTop: 12,
-                letterSpacing: -0.5,
-              }}
-            >
-              {selectedItems.length} selected
-            </Text>
-
-            <View className="w-full flex-row justify-between items-center px-4 mb-4 z-10">
-              <TouchableOpacity 
-                className="items-center"
-                onPress={() => {
-                  const itemsCount = safePages.filter((p:any) => p.type !== 'landing').length;
-                  if (selectedItems.length === itemsCount) {
-                    setSelectedItems([]);
-                  } else {
-                    const allIds = safePages.filter((p:any) => p.type !== 'landing').map((p:any) => p.id);
-                    setSelectedItems(allIds);
-                  }
-                }}
-              >
-                <View 
-                  className={`w-6 h-6 rounded-full border-2 items-center justify-center mb-1 ${selectedItems.length === safePages.filter((p:any) => p.type !== 'landing').length && selectedItems.length > 0 ? 'border-transparent bg-[#B0D0FF]' : 'border-[#a0a0a0] bg-transparent'}`} 
-                  style={selectedItems.length === safePages.filter((p:any) => p.type !== 'landing').length && selectedItems.length > 0 ? { backgroundColor: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF' } : {}}
-                >
-                  {selectedItems.length === safePages.filter((p:any) => p.type !== 'landing').length && selectedItems.length > 0 && <Feather name="check" size={16} color="black" />}
-                </View>
-                <Text className="text-white text-xs">All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setIsEditMode(false); setSelectedItems([]); }}>
-                <Text className="text-[#B0D0FF] text-lg font-medium" style={{ color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF' }}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <>
-            <Text 
-              style={{
-                fontSize: 42,
-                fontWeight: '600',
-                color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF',
-                textAlign: 'center',
-                marginBottom: 12,
-                letterSpacing: -0.5,
-              }}
-            >
-              rainiX
-            </Text>
-
-            <TouchableOpacity 
-              onPress={() => router.push('/ai')}
-              className="bg-[#1c1c1e] rounded-full px-5 py-2 flex-row items-center self-center mb-8 z-10"
-              activeOpacity={0.7}
-            >
-              <Feather name="arrow-up-right" size={14} color={Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF'} style={{ marginRight: 6 }} />
-              <Text style={{ color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF', fontWeight: '500', fontSize: 14 }}>rainiX AI</Text>
-            </TouchableOpacity>
-
-            {/* Action Row */}
-            <View className="w-full flex-row justify-between items-center px-2 mb-6 z-10">
+        <View className="flex-row items-center">
+          {isEditMode ? (
+            <>
               <TouchableOpacity onPress={() => {
-                if (scrollToPage && pages && pages.length > 1) {
-                  scrollToPage(1); // Back to GPS or first fav
-                }
-              }} className="p-2" activeOpacity={0.7}>
-                <Feather name="chevron-left" size={28} color="white" />
+                  const itemsCount = safePages.filter((p:any) => p.type !== 'landing').length;
+                  if (selectedItems.length === itemsCount) setSelectedItems([]);
+                  else setSelectedItems(safePages.filter((p:any) => p.type !== 'landing').map((p:any) => p.id));
+              }} className="p-2 mr-2">
+                <Text className="text-white font-medium">All</Text>
               </TouchableOpacity>
-              <View className="flex-row items-center">
-                <TouchableOpacity onPress={() => setIsSearchMode(true)} className="p-2 ml-1" activeOpacity={0.7}>
-                  <Feather name="search" size={22} color="white" />
-                </TouchableOpacity>
-                <TouchableOpacity className="p-2 ml-2" activeOpacity={0.7}>
-                  <Feather name="more-vertical" size={22} color="white" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
-        )}
+              <TouchableOpacity onPress={() => { setIsEditMode(false); setSelectedItems([]); }} className="p-2">
+                <Text style={{ color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF', fontWeight: '500' }}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity onPress={() => setIsSearchMode(true)} className="p-2 ml-1" activeOpacity={0.7}>
+                <Feather name="search" size={22} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity className="p-2 ml-1" activeOpacity={0.7}>
+                <Feather name="more-vertical" size={22} color="white" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
 
+      {/* Main Content */}
+      <View style={{ flex: 1, alignItems: 'center', paddingTop: 0, paddingHorizontal: 16 }}>
+        
         {/* Cards List using DraggableFlatList */}
         <View className="flex-1 w-full z-10">
           <DraggableFlatList
             data={safePages.filter((p: any) => p.type === 'fav')}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
             onDragBegin={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
             onDragEnd={({ data }) => {
               if (setFavorites) {
@@ -401,12 +377,33 @@ export default function LandingScreen({  pages,
             contentContainerStyle={{ paddingBottom: 64 }}
             ListHeaderComponent={() => (
               <View className="w-full">
-                {safePages.filter((p: any) => p.type !== 'landing').length === 0 && (
-                   <View className="items-center py-10 opacity-50">
-                      <Text className="text-white text-lg">No pages added yet.</Text>
-                      <Text className="text-white/80 mt-2 text-sm text-center">Tap the + icon to search and add cities or rivers.</Text>
-                   </View>
-                )}
+                <Animated.View style={[{ paddingTop: 110, paddingBottom: 24, paddingHorizontal: 8, alignItems: 'flex-start', width: '100%' }, largeHeaderStyle]}>
+                  {isEditMode ? (
+                    <Text style={{ fontSize: 34, fontWeight: '700', color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF' }}>
+                      {selectedItems.length} selected
+                    </Text>
+                  ) : (
+                    <>
+                      <Text style={{ fontSize: 38, fontWeight: '700', color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF', letterSpacing: -0.5 }}>
+                        rainiX
+                      </Text>
+                      <TouchableOpacity 
+                        onPress={() => router.push('/ai')}
+                        className="bg-[#1c1c1e] rounded-full px-4 py-2 flex-row items-center mt-3"
+                        activeOpacity={0.7}
+                      >
+                        <Feather name="arrow-up-right" size={14} color={Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF'} style={{ marginRight: 6 }} />
+                        <Text style={{ color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF', fontWeight: '500', fontSize: 13 }}>rainiX AI</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {safePages.filter((p: any) => p.type !== 'landing').length === 0 && (
+                     <View className="items-center py-10 opacity-50 w-full mt-4">
+                        <Text className="text-white text-lg">No pages added yet.</Text>
+                        <Text className="text-white/80 mt-2 text-sm text-center">Tap the search icon to add cities.</Text>
+                     </View>
+                  )}
+                </Animated.View>
                 {/* Render GPS Item if exists */}
                 {safePages.filter((p: any) => p.type === 'gps').length > 0 ? (
                   safePages.filter((p: any) => p.type === 'gps').map((p: any) => {

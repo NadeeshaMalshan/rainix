@@ -687,7 +687,7 @@ export default function WeatherScreen({ city, lat, lon, isGps, isActive = true }
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         style={{ zIndex: 10 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, paddingTop: 140 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, paddingTop: 110 }}
       >
         {isLoading ? (
           <View className="flex-1 justify-center items-center mt-20">
