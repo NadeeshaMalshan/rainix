@@ -25,10 +25,21 @@ import Animated, {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // 1. Rain Droplet Animation
-function RainDrop({ left, initialY, speedMultiplier, progress, scrollY }: { left: number; initialY: number; speedMultiplier: number; progress: SharedValue<number>; scrollY: SharedValue<number> }) {
+function RainDrop({ left, duration, delay, scrollY }: { left: number; duration: number; delay: number; scrollY: SharedValue<number> }) {
+  const translateY = useSharedValue(-40);
+
+  useEffect(() => {
+    translateY.value = withDelay(
+      delay,
+      withRepeat(
+        withTiming(SCREEN_HEIGHT + 40, { duration, easing: Easing.linear }),
+        -1,
+        false
+      )
+    );
+  }, []);
+
   const animatedStyle = useAnimatedStyle(() => {
-    const totalHeight = SCREEN_HEIGHT + 80;
-    const y = (initialY + progress.value * speedMultiplier * totalHeight) % totalHeight - 40;
     const dimFactor = interpolate(
       scrollY.value,
       [0, 250],
@@ -36,7 +47,7 @@ function RainDrop({ left, initialY, speedMultiplier, progress, scrollY }: { left
       Extrapolation.CLAMP
     );
     return {
-      transform: [{ translateY: y }],
+      transform: [{ translateY: translateY.value }],
       opacity: dimFactor,
     };
   });
@@ -60,28 +71,17 @@ function RainDrop({ left, initialY, speedMultiplier, progress, scrollY }: { left
   );
 }
 
-// CloudEffect and others remain exactly the same as they were, just accepting scrollY
 function RainEffect({ scrollY }: { scrollY: SharedValue<number> }) {
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    progress.value = withRepeat(
-      withTiming(1, { duration: 1000, easing: Easing.linear }),
-      -1,
-      false
-    );
-  }, []);
-
-  const drops = useRef(Array.from({ length: 30 }).map((_, i) => ({
+  const drops = useRef(Array.from({ length: 40 }).map(() => ({
     left: Math.random() * 100,
-    initialY: Math.random() * (SCREEN_HEIGHT + 80),
-    speedMultiplier: 0.8 + Math.random() * 0.4,
+    duration: 600 + Math.random() * 400,
+    delay: Math.random() * 1000,
   }))).current;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {drops.map((drop, i) => (
-        <RainDrop key={i} left={drop.left} initialY={drop.initialY} speedMultiplier={drop.speedMultiplier} progress={progress} scrollY={scrollY} />
+        <RainDrop key={i} left={drop.left} duration={drop.duration} delay={drop.delay} scrollY={scrollY} />
       ))}
     </View>
   );
@@ -638,7 +638,6 @@ export default function WeatherScreen({ city, lat, lon, isGps, isActive = true }
         <LinearGradient colors={getBackgroundGradient(weatherState) as [string, string, ...string[]]} style={{ flex: 1 }}>
       {/* Background Weather Effects wrapped in absolute zIndex container */}
       <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} pointerEvents="none">
-        {isActive && weatherState === 'thunderstorm' && <LightningEffect scrollY={scrollY} />}
         {isActive && ['clear_night', 'partly_cloudy_night'].includes(weatherState) && <StarEffect scrollY={scrollY} />}
         {isActive && cloudCount > 0 && <CloudEffect count={cloudCount} tintColor={cloudTintColor} scrollY={scrollY} />}
         {isActive && ['rainy', 'thunderstorm'].includes(weatherState) && <RainEffect scrollY={scrollY} />}
