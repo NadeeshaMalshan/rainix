@@ -377,7 +377,7 @@ export default function LandingScreen({  pages,
             contentContainerStyle={{ paddingBottom: 64 }}
             ListHeaderComponent={() => (
               <View className="w-full">
-                <Animated.View style={[{ paddingTop: 110, paddingBottom: 24, paddingHorizontal: 8, alignItems: 'flex-start', width: '100%' }, largeHeaderStyle]}>
+                <Animated.View style={[{ paddingTop: 110, paddingBottom: 24, paddingHorizontal: 8, alignItems: 'center', width: '100%' }, largeHeaderStyle]}>
                   {isEditMode ? (
                     <Text style={{ fontSize: 34, fontWeight: '700', color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF' }}>
                       {selectedItems.length} selected
