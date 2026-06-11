@@ -57,14 +57,14 @@ function RainDrop({ left, duration, delay, scrollY }: { left: number; duration: 
       style={[{
         position: 'absolute',
         top: 0,
-        width: 2.5,
+        width: 2.0,
         height: 22,
-        backgroundColor: 'rgba(180, 225, 255, 0.92)',
+        backgroundColor: 'rgba(200, 230, 255, 0.35)',
         borderRadius: 3,
         left: `${left}%`,
-        shadowColor: 'rgba(120, 190, 255, 0.4)',
+        shadowColor: 'rgba(150, 200, 255, 0.2)',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.6,
+        shadowOpacity: 0.3,
         shadowRadius: 1,
       }, animatedStyle]}
     />
