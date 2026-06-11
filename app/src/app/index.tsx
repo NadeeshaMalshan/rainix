@@ -98,9 +98,9 @@ export default function App() {
         {pages.map((p, i) => (
           <View key={p.id} style={{ width: SCREEN_WIDTH, height: '100%', overflow: 'hidden' }}>
             {p.type === 'landing' && <LandingScreen pages={pages} scrollToPage={scrollToPage} favorites={favorites} setFavorites={setFavorites} />}
-            {p.type === 'gps' && <WeatherScreen isGps={true} />}
+            {p.type === 'gps' && <WeatherScreen isGps={true} isActive={currentPage === i} />}
             {p.type === 'fav' && (
-              p.isRiver ? <RiverScreen query={p.name} /> : <WeatherScreen city={p.name} />
+              p.isRiver ? <RiverScreen query={p.name} /> : <WeatherScreen city={p.name} isActive={currentPage === i} />
             )}
           </View>
         ))}

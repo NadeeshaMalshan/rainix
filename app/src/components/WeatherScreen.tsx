@@ -354,9 +354,10 @@ interface WeatherScreenProps {
   lat?: string;
   lon?: string;
   isGps?: boolean;
+  isActive?: boolean;
 }
 
-export default function WeatherScreen({ city, lat, lon, isGps }: WeatherScreenProps) {
+export default function WeatherScreen({ city, lat, lon, isGps, isActive = true }: WeatherScreenProps) {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -637,11 +638,11 @@ export default function WeatherScreen({ city, lat, lon, isGps }: WeatherScreenPr
         <LinearGradient colors={getBackgroundGradient(weatherState) as [string, string, ...string[]]} style={{ flex: 1 }}>
       {/* Background Weather Effects wrapped in absolute zIndex container */}
       <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]} pointerEvents="none">
-        {weatherState === 'thunderstorm' && <LightningEffect scrollY={scrollY} />}
-        {['clear_night', 'partly_cloudy_night'].includes(weatherState) && <StarEffect scrollY={scrollY} />}
-        {cloudCount > 0 && <CloudEffect count={cloudCount} tintColor={cloudTintColor} scrollY={scrollY} />}
-        {['rainy', 'thunderstorm'].includes(weatherState) && <RainEffect scrollY={scrollY} />}
-        {weatherState === 'snow' && <SnowEffect scrollY={scrollY} />}
+        {isActive && weatherState === 'thunderstorm' && <LightningEffect scrollY={scrollY} />}
+        {isActive && ['clear_night', 'partly_cloudy_night'].includes(weatherState) && <StarEffect scrollY={scrollY} />}
+        {isActive && cloudCount > 0 && <CloudEffect count={cloudCount} tintColor={cloudTintColor} scrollY={scrollY} />}
+        {isActive && ['rainy', 'thunderstorm'].includes(weatherState) && <RainEffect scrollY={scrollY} />}
+        {isActive && weatherState === 'snow' && <SnowEffect scrollY={scrollY} />}
       </View>
 
       {/* Celestial Body (Sun/Moon) */}
