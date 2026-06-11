@@ -210,7 +210,7 @@ function AIRiverTelemetryCard({ data }: any) {
           historical_data: river.historicalData || [],
           weather_data: data
         };
-        const aiApiUrl = "http://10.0.2.2:8000";
+        const aiApiUrl = process.env.EXPO_PUBLIC_AI_API_URL || "http://10.0.2.2:8000";
         const res = await fetch(`${aiApiUrl}/api/predict/river`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -482,7 +482,7 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
-      const aiApiUrl = "http://10.0.2.2:8000";
+      const aiApiUrl = process.env.EXPO_PUBLIC_AI_API_URL || "http://10.0.2.2:8000";
       const assistantId = Date.now() + 1;
       const placeholderMsg = {
         id: assistantId,
@@ -524,7 +524,7 @@ export default function AIAssistant() {
         let fetchedData = null;
         if (detected) {
           try {
-            const nodeApiUrl = "http://10.0.2.2:5000";
+            const nodeApiUrl = process.env.EXPO_PUBLIC_NODE_API_URL || "http://10.0.2.2:5000";
             let url = `${nodeApiUrl}/api/city/${encodeURIComponent(detected)}?full=true`;
             if (detectedBackendIntent === "river" && detectedBackendIsBasin) {
                 url = `${nodeApiUrl}/api/rivers/${encodeURIComponent(detected)}?full=true`;

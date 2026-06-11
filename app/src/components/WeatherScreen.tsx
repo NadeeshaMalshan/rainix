@@ -453,15 +453,21 @@ export default function WeatherScreen({ city, lat, lon, isGps }: WeatherScreenPr
 
     setErrorMsg('');
     try {
-      let nodeApiUrl = "http://10.0.2.2:5000";
-      if (__DEV__) {
-        try {
-          const Constants = require('expo-constants').default;
-          const hostUri = Constants?.expoConfig?.hostUri;
-          if (hostUri) {
-            nodeApiUrl = `http://${hostUri.split(':')[0]}:5000`;
+      let nodeApiUrl = process.env.EXPO_PUBLIC_NODE_API_URL || "http://10.0.2.2:5000";
+      if (!process.env.EXPO_PUBLIC_NODE_API_URL && Constants.appOwnership === 'expo') {
+        const hostUri = Constants.experienceUrl;
+        if (hostUri) {
+          try {
+            const parsedUri = new URL(hostUri);
+            if (parsedUri.hostname) {
+              nodeApiUrl = `http://${parsedUri.hostname}:5000`;
+            }
+          } catch (e) {
+            if (hostUri.includes(':')) {
+              nodeApiUrl = `http://${hostUri.split(':')[0]}:5000`;
+            }
           }
-        } catch (e) {}
+        }
       }
       
       let url = `${nodeApiUrl}/api/city/${encodeURIComponent(resolvedCity)}?full=true`;
