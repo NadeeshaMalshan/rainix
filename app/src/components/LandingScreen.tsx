@@ -314,22 +314,33 @@ export default function LandingScreen({  pages,
       </View>
 
       {/* Fixed Top Bar (OneUI Style) */}
-      <View className="absolute top-0 left-0 right-0 z-50 flex-row justify-between items-end px-4 pb-3" style={{ height: 90, backgroundColor: 'rgba(0,0,0,0.85)' }}>
-        <Animated.Text 
-          style={[
-            {
-              fontSize: 22,
-              fontWeight: '600',
-              color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF',
-              marginLeft: 8,
-            },
-            smallTitleStyle
-          ]}
-        >
-          {isEditMode ? `${selectedItems.length} selected` : 'rainiX'}
-        </Animated.Text>
-        
+      <View className="absolute top-0 left-0 right-0 z-50 flex-row justify-between items-end px-2 pb-3" style={{ height: 90, backgroundColor: 'rgba(0,0,0,0.85)' }}>
         <View className="flex-row items-center">
+          {!isEditMode && (
+            <TouchableOpacity onPress={() => {
+              if (scrollToPage && pages && pages.length > 1) {
+                scrollToPage(1); // Back to GPS or first fav
+              }
+            }} className="p-2" activeOpacity={0.7}>
+              <Feather name="chevron-left" size={28} color="white" />
+            </TouchableOpacity>
+          )}
+          <Animated.Text 
+            style={[
+              {
+                fontSize: 22,
+                fontWeight: '600',
+                color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF',
+                marginLeft: isEditMode ? 12 : 4,
+              },
+              smallTitleStyle
+            ]}
+          >
+            {isEditMode ? `${selectedItems.length} selected` : 'rainiX'}
+          </Animated.Text>
+        </View>
+        
+        <View className="flex-row items-center mr-2">
           {isEditMode ? (
             <>
               <TouchableOpacity onPress={() => {
@@ -376,24 +387,32 @@ export default function LandingScreen({  pages,
             keyExtractor={(item: any) => item.id}
             contentContainerStyle={{ paddingBottom: 64 }}
             ListHeaderComponent={() => (
-              <View className="w-full">
-                <Animated.View style={[{ paddingTop: 110, paddingBottom: 24, paddingHorizontal: 8, alignItems: 'center', width: '100%' }, largeHeaderStyle]}>
+              <View className="w-full relative">
+                <Animated.View style={[{ paddingTop: 100, paddingBottom: 24, paddingHorizontal: 8, alignItems: 'center', width: '100%' }, largeHeaderStyle]}>
                   {isEditMode ? (
                     <Text style={{ fontSize: 34, fontWeight: '700', color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF' }}>
                       {selectedItems.length} selected
                     </Text>
                   ) : (
                     <>
-                      <Text style={{ fontSize: 38, fontWeight: '700', color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF', letterSpacing: -0.5 }}>
+                      <Text style={{ fontSize: 42, fontWeight: '700', color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF', letterSpacing: -0.5 }}>
                         rainiX
                       </Text>
                       <TouchableOpacity 
                         onPress={() => router.push('/ai')}
-                        className="bg-[#1c1c1e] rounded-full px-4 py-2 flex-row items-center mt-3"
+                        className="bg-[#1c1c1e] rounded-full px-5 py-2.5 flex-row items-center mt-4"
                         activeOpacity={0.7}
                       >
                         <Feather name="arrow-up-right" size={14} color={Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF'} style={{ marginRight: 6 }} />
                         <Text style={{ color: Platform.OS === 'android' && Platform.Version >= 31 ? PlatformColor('@android:color/system_accent1_300') : '#B0D0FF', fontWeight: '500', fontSize: 13 }}>rainiX AI</Text>
+                      </TouchableOpacity>
+                      
+                      {/* Settings Gear Floating */}
+                      <TouchableOpacity 
+                        style={{ position: 'absolute', top: 105, right: 10, width: 44, height: 44, borderRadius: 22, backgroundColor: '#222', justifyContent: 'center', alignItems: 'center' }}
+                        activeOpacity={0.7}
+                      >
+                        <Feather name="settings" size={20} color="#a0a0a0" />
                       </TouchableOpacity>
                     </>
                   )}
