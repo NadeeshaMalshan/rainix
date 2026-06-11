@@ -28,6 +28,12 @@ export default function WeatherDashboard() {
   const [isStickyFocused, setIsStickyFocused] = useState(false);
   const [showStickyNav, setShowStickyNav] = useState(false);
   const [isMobileSearchExpanded, setIsMobileSearchExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const locationRef = useRef(null);
   const [savedLocationsWeather, setSavedLocationsWeather] = useState({
     'Tokyo, JP': { temp: '19°', status: 'Clear Conditions', style: 'sunny' },
@@ -79,8 +85,9 @@ export default function WeatherDashboard() {
 
   const saveToRecentSearches = (data) => {
     try {
-      const locationName = `${data.weather.city}, ${data.weather.country}`;
-      const coordsText = `${data.weather.coordinates.latitude.toFixed(4)}° N, ${data.weather.coordinates.longitude.toFixed(4)}° E`;
+      if (!data) return;
+      const locationName = data.weather ? `${data.weather.city}, ${data.weather.country}` : data.city;
+      const coordsText = data.weather?.coordinates ? `${data.weather.coordinates.latitude.toFixed(4)}° N, ${data.weather.coordinates.longitude.toFixed(4)}° E` : '';
       const newSearchItem = { name: locationName, query: data.city, coords: coordsText };
       const saved = localStorage.getItem('rainix_recent_searches');
       let recent = saved ? JSON.parse(saved) : [];
@@ -278,9 +285,9 @@ export default function WeatherDashboard() {
   const weather = cityData?.weather?.weather;
   const rivers = cityData?.rivers || [];
   
-  const urlLat = lat || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lat') : null);
-  const urlLon = lon || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lon') : null);
-  const urlCity = city || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('city') : null);
+  const urlLat = lat || (mounted ? new URLSearchParams(window.location.search).get('lat') : null);
+  const urlLon = lon || (mounted ? new URLSearchParams(window.location.search).get('lon') : null);
+  const urlCity = city || (mounted ? new URLSearchParams(window.location.search).get('city') : null);
   
   const formattedCity = urlCity || cityData?.weather?.city || ((urlLat && urlLon) ? 'Your Location' : 'Select a City');
   const formattedCountry = cityData?.weather?.country || 'Sri Lanka';

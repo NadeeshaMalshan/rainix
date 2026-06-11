@@ -31,6 +31,11 @@ export default function RiverDashboard() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const [selectedRiverIdx, setSelectedRiverIdx] = useState(0);
   const [showStationsDropdown, setShowStationsDropdown] = useState(false);
@@ -238,9 +243,9 @@ export default function RiverDashboard() {
   const rivers = cityData?.rivers || [];
   const activeRiver = rivers.length > 0 ? (rivers[selectedRiverIdx] || rivers[0]) : null;
 
-  const urlLat = lat || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lat') : null);
-  const urlLon = lon || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lon') : null);
-  const urlQueryLocation = queryLocation || (typeof window !== 'undefined' && window.location.search ? new URLSearchParams(window.location.search).keys().next().value : null);
+  const urlLat = lat || (mounted ? new URLSearchParams(window.location.search).get('lat') : null);
+  const urlLon = lon || (mounted ? new URLSearchParams(window.location.search).get('lon') : null);
+  const urlQueryLocation = queryLocation || (mounted && window.location.search ? new URLSearchParams(window.location.search).keys().next().value : null);
 
   const formattedCity = (urlQueryLocation && urlQueryLocation !== 'lat' && urlQueryLocation !== 'lon' ? urlQueryLocation.replace(/-/g, ' ') : null) || (activeRiver ? activeRiver.name : cityData?.weather?.city) || ((urlLat && urlLon) ? 'Your Location' : 'Select a City');
   const formattedCountry = activeRiver ? (activeRiver.basin ? `${activeRiver.basin} Basin` : (cityData?.weather?.city || queryLocation || 'Select a City')) : (cityData?.weather?.country || 'Sri Lanka');
