@@ -72,7 +72,7 @@ function RainDrop({ left, duration, delay, scrollY }: { left: number; duration: 
 }
 
 function RainEffect({ scrollY }: { scrollY: SharedValue<number> }) {
-  const drops = useRef(Array.from({ length: 40 }).map(() => ({
+  const drops = useRef(Array.from({ length: 15 }).map(() => ({
     left: Math.random() * 100,
     duration: 600 + Math.random() * 400,
     delay: Math.random() * 1000,
