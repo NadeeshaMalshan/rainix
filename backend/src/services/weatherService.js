@@ -10,7 +10,7 @@ exports.fetchWeatherData = async (latitude, longitude) => {
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
       `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,wind_direction_10m,visibility,surface_pressure` +
       `&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m` +
-      `&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,precipitation_probability_max,weather_code,uv_index_max` +
+      `&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,precipitation_probability_max,weather_code,uv_index_max` +
       `&timezone=auto&forecast_days=14`;
 
     const weatherResponse = await axios.get(weatherUrl);
@@ -90,12 +90,11 @@ exports.fetchWeatherData = async (latitude, longitude) => {
           windDirection: hourly.wind_direction_10m[idx],
         })).slice(hourlyIndex !== -1 ? hourlyIndex : 0, (hourlyIndex !== -1 ? hourlyIndex : 0) + 24),
 
-        // Daily: 14 days forecast
         forecast14Days: daily.time.map((timeStr, idx) => ({
           date: timeStr,
           high: daily.temperature_2m_max[idx],
           low: daily.temperature_2m_min[idx],
-          avg: daily.temperature_2m_mean ? daily.temperature_2m_mean[idx] : (daily.temperature_2m_max[idx] + daily.temperature_2m_min[idx]) / 2,
+          avg: (daily.temperature_2m_max[idx] + daily.temperature_2m_min[idx]) / 2,
           feelsLikeMax: daily.apparent_temperature_max[idx],
           feelsLikeMin: daily.apparent_temperature_min[idx],
           sunrise: daily.sunrise[idx],
